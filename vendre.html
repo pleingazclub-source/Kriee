@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vendre un bateau — Kriee</title>
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .sell-form { max-width: 560px; margin: 0 auto; padding: 3rem 2rem; }
+  .sell-form h1 { font-family: var(--font-display); font-size: 1.8rem; }
+  .field { margin-bottom: 1.1rem; }
+  .field label { display: block; font-size: 0.85rem; margin-bottom: 0.35rem; color: #5A6772; }
+  .field input, .field select, .field textarea {
+    width: 100%; padding: 0.65rem; border: 1px solid #C9C2B2; border-radius: 3px; font-family: var(--font-body); font-size: 0.95rem;
+  }
+  .field textarea { min-height: 100px; }
+  .field-row { display: flex; gap: 1rem; }
+  .field-row .field { flex: 1; }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <a href="index.html" class="brand">Kri<span style="color:var(--buoy)">ee</span>
+    <span class="brand__sub">SUD DE LA FRANCE</span>
+  </a>
+  <nav class="site-nav">
+    <a href="index.html">Enchères en cours</a>
+    <a href="vendre.html">Vendre un bateau</a>
+  </nav>
+</header>
+
+<main class="sell-form">
+  <h1>Mettre un lot en vente</h1>
+  <p style="color:#5A6772; font-size:0.92rem;">0% de frais vendeur — vous êtes payé au prix marteau. Le lot passe en modération avant sa mise en ligne.</p>
+
+  <form id="sell-form">
+    <div class="field">
+      <label for="title">Titre du lot</label>
+      <input type="text" id="title" required placeholder="Ex. Voilier Bénéteau First 30 — 1998">
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label for="category">Catégorie</label>
+        <select id="category" required>
+          <option value="voile">Voile</option>
+          <option value="moteur">Moteur</option>
+          <option value="semi-rigide">Semi-rigide</option>
+          <option value="equipement">Équipement & accastillage</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="region">Région</label>
+        <select id="region" required>
+          <option>PACA</option>
+          <option>Occitanie</option>
+          <option>Corse</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="port">Port / lieu de visite</label>
+      <input type="text" id="port" placeholder="Ex. Saint-Mandrier-sur-Mer">
+    </div>
+
+    <div class="field">
+      <label for="description">Description</label>
+      <textarea id="description" required></textarea>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label for="starting">Prix de départ (€)</label>
+        <input type="number" id="starting" required min="1">
+      </div>
+      <div class="field">
+        <label for="reserve">Prix de réserve (€, confidentiel)</label>
+        <input type="number" id="reserve" required min="1">
+      </div>
+      <div class="field">
+        <label for="increment">Palier d'enchère (€)</label>
+        <input type="number" id="increment" required min="1" value="100">
+      </div>
+    </div>
+
+    <button type="submit" class="btn btn--primary" style="width:100%; padding:0.85rem;">Soumettre le lot pour modération</button>
+    <p id="sell-feedback" style="font-size:0.85rem; margin-top:0.8rem;" role="status"></p>
+  </form>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase-client.js"></script>
+<script>
+document.getElementById('sell-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const feedback = document.getElementById('sell-feedback');
+  const isConfigured = !SUPABASE_URL.includes('TON-PROJET');
+
+  if (!isConfigured) {
+    feedback.textContent = 'Démo : connecte Supabase (js/supabase-client.js) pour publier réellement un lot.';
+    feedback.style.color = 'var(--mistral)';
+    return;
+  }
+
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (!session) {
+    feedback.textContent = 'Connecte-toi pour déposer un lot.';
+    feedback.style.color = 'var(--buoy)';
+    return;
+  }
+
+  const { data: cat } = await supabaseClient.from('categories').select('id').eq('slug', document.getElementById('category').value).single();
+
+  const { error } = await supabaseClient.from('lots').insert({
+    seller_id: session.user.id,
+    category_id: cat.id,
+    title: document.getElementById('title').value,
+    description: document.getElementById('description').value,
+    region: document.getElementById('region').value,
+    port_location: document.getElementById('port').value,
+    starting_price: Number(document.getElementById('starting').value),
+    current_price: Number(document.getElementById('starting').value),
+    reserve_price: Number(document.getElementById('reserve').value),
+    bid_increment: Number(document.getElementById('increment').value),
+    status: 'draft',
+    starts_at: new Date().toISOString(),
+    ends_at: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7).toISOString(),
+  });
+
+  if (error) {
+    feedback.textContent = error.message;
+    feedback.style.color = 'var(--buoy)';
+  } else {
+    feedback.textContent = 'Lot soumis. Il passera en ligne après modération.';
+    feedback.style.color = 'var(--mistral)';
+    e.target.reset();
+  }
+});
+</script>
+</body>
+</html>

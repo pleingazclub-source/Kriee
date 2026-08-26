@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title id="page-title">Lot — Kriee</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <a href="index.html" class="brand">Kri<span style="color:var(--buoy)">ee</span>
+    <span class="brand__sub">SUD DE LA FRANCE</span>
+  </a>
+  <nav class="site-nav">
+    <a href="index.html">Enchères en cours</a>
+    <a href="vendre.html">Vendre un bateau</a>
+    <a href="#" class="btn btn--ghost" id="nav-login">Se connecter</a>
+  </nav>
+</header>
+
+<main class="lot-detail" id="lot-detail">
+  <section>
+    <div class="lot-detail__media" id="lot-media"></div>
+    <h1 id="lot-title">Chargement du lot…</h1>
+    <p id="lot-region" style="color:#5A6772;"></p>
+    <table class="spec-table" id="lot-specs"></table>
+    <div>
+      <h3 style="font-family:var(--font-display); font-weight:500;">Description</h3>
+      <p id="lot-description"></p>
+    </div>
+  </section>
+
+  <aside class="bid-panel">
+    <div class="bid-panel__timer" id="bid-timer">--:--:--</div>
+    <div class="bid-panel__current">
+      <div class="bid-panel__current-label">Enchère actuelle</div>
+      <div class="bid-panel__current-amount" id="bid-current">— €</div>
+    </div>
+
+    <form class="bid-form" id="bid-form">
+      <input type="number" id="bid-amount" step="1" required aria-label="Montant de votre enchère">
+      <button type="submit" class="btn btn--primary">Enchérir</button>
+    </form>
+    <p id="bid-min-hint" style="font-size:0.78rem; color:#5A6772; margin-top:-0.6rem;"></p>
+    <p id="bid-feedback" style="font-size:0.85rem;" role="status"></p>
+
+    <div class="price-breakdown" id="price-breakdown"></div>
+
+    <div class="bid-history" id="bid-history"></div>
+  </aside>
+</main>
+
+<footer class="site-footer">
+  <strong>Kriee</strong> — le vendeur ne paie aucun frais. L'acheteur règle le prix marteau + 18% de frais de vente + TVA (21%) sur ces frais.
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase-client.js"></script>
+<script src="js/lot.js"></script>
+</body>
+</html>

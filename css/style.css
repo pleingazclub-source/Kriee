@@ -1,0 +1,320 @@
+/* ============================================================
+   MISTRAL ENCHÈRES — tokens
+   Palette : nuit de quart en mer + laiton des winchs + rouge des bouées
+   Display : Oswald (condensé, rappelle les pavillons de signalisation)
+   Corps   : IBM Plex Sans
+   Data    : IBM Plex Mono (compte à rebours, montants — cadran d'instrument)
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap');
+
+:root {
+  --ink: #0E2233;        /* nuit de quart */
+  --mistral: #2C6E8E;    /* bleu mistral / voile */
+  --brass: #B8935A;      /* laiton des winchs */
+  --buoy: #C7401F;       /* rouge bouée / balise */
+  --chalk: #F1EEE6;      /* coque blanche, sable */
+  --foam: #FBFAF7;
+
+  --font-display: 'Oswald', sans-serif;
+  --font-body: 'IBM Plex Sans', sans-serif;
+  --font-data: 'IBM Plex Mono', monospace;
+
+  --radius: 3px;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--foam);
+  color: var(--ink);
+  font-family: var(--font-body);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: inherit; }
+
+/* ---------- Ticker de tête : lots qui clôturent bientôt ---------- */
+.ticker {
+  background: var(--ink);
+  color: var(--chalk);
+  overflow: hidden;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--brass);
+}
+.ticker__track {
+  display: inline-flex;
+  gap: 3rem;
+  padding: 0.5rem 0;
+  animation: scroll 32s linear infinite;
+}
+.ticker__item {
+  font-family: var(--font-data);
+  font-size: 0.8rem;
+  letter-spacing: 0.02em;
+  display: inline-flex;
+  gap: 0.6rem;
+  align-items: center;
+}
+.ticker__item strong { color: var(--brass); }
+@keyframes scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ticker__track { animation: none; overflow-x: auto; }
+}
+
+/* ---------- Header ---------- */
+.site-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.1rem 2rem;
+  border-bottom: 1px solid #E4DFD3;
+  background: var(--foam);
+}
+.brand {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  font-weight: 600;
+  text-decoration: none;
+  letter-spacing: 0.01em;
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+.brand__sub {
+  font-family: var(--font-data);
+  font-size: 0.65rem;
+  color: var(--mistral);
+  font-weight: 500;
+  letter-spacing: 0.08em;
+}
+.site-nav { display: flex; gap: 1.8rem; align-items: center; }
+.site-nav a {
+  text-decoration: none;
+  font-size: 0.92rem;
+  color: var(--ink);
+  border-bottom: 2px solid transparent;
+  padding-bottom: 2px;
+}
+.site-nav a:hover, .site-nav a:focus-visible { border-color: var(--brass); }
+.btn {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.88rem;
+  padding: 0.6rem 1.2rem;
+  border-radius: var(--radius);
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+}
+.btn:focus-visible { outline: 3px solid var(--mistral); outline-offset: 2px; }
+.btn--primary { background: var(--buoy); color: var(--foam); }
+.btn--primary:hover { background: #a8341a; }
+.btn--ghost { background: transparent; color: var(--ink); border: 1px solid var(--ink); }
+.btn--ghost:hover { background: var(--ink); color: var(--foam); }
+
+/* ---------- Hero : le signal, pas un carrousel ---------- */
+.hero {
+  background: var(--ink);
+  color: var(--foam);
+  padding: 4.5rem 2rem 3.5rem;
+  position: relative;
+  overflow: hidden;
+}
+.hero__gust {
+  position: absolute;
+  inset: 0;
+  opacity: 0.14;
+  background-image:
+    repeating-linear-gradient(100deg, transparent 0 60px, var(--brass) 60px 61px, transparent 61px 140px);
+  pointer-events: none;
+}
+.hero__inner { max-width: 900px; position: relative; }
+.hero__eyebrow {
+  font-family: var(--font-data);
+  color: var(--brass);
+  font-size: 0.8rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin: 0 0 0.9rem;
+}
+.hero h1 {
+  font-family: var(--font-display);
+  font-size: clamp(2.2rem, 5vw, 3.6rem);
+  font-weight: 600;
+  line-height: 1.05;
+  margin: 0 0 1.1rem;
+}
+.hero p {
+  font-size: 1.08rem;
+  max-width: 560px;
+  color: #C9D3D9;
+  margin: 0 0 2rem;
+}
+.hero__actions { display: flex; gap: 1rem; flex-wrap: wrap; }
+
+/* ---------- Bandeau modèle économique ---------- */
+.fee-strip {
+  display: flex;
+  gap: 0;
+  flex-wrap: wrap;
+  border-top: 1px solid #24384A;
+  margin-top: 3rem;
+  padding-top: 2rem;
+}
+.fee-strip__item { flex: 1; min-width: 200px; padding-right: 2rem; }
+.fee-strip__num {
+  font-family: var(--font-data);
+  font-size: 1.6rem;
+  color: var(--brass);
+  display: block;
+}
+.fee-strip__label { font-size: 0.85rem; color: #AAB8C2; }
+
+/* ---------- Filtres ---------- */
+.filters {
+  display: flex;
+  gap: 0.6rem;
+  padding: 1.4rem 2rem;
+  flex-wrap: wrap;
+  border-bottom: 1px solid #E4DFD3;
+}
+.chip {
+  font-family: var(--font-data);
+  font-size: 0.78rem;
+  padding: 0.4rem 0.85rem;
+  border: 1px solid #C9C2B2;
+  border-radius: 999px;
+  background: var(--foam);
+  cursor: pointer;
+}
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--foam); border-color: var(--ink); }
+
+/* ---------- Grille de lots ---------- */
+.lots-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+  padding: 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+.lot-card {
+  background: var(--foam);
+  border: 1px solid #E4DFD3;
+  border-radius: var(--radius);
+  overflow: hidden;
+  text-decoration: none;
+  color: var(--ink);
+  display: flex;
+  flex-direction: column;
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+.lot-card:hover { box-shadow: 0 6px 18px rgba(14,34,51,0.12); transform: translateY(-2px); }
+.lot-card__media {
+  aspect-ratio: 4/3;
+  background: linear-gradient(135deg, var(--mistral), var(--ink));
+  position: relative;
+}
+.lot-card__flag {
+  position: absolute;
+  top: 0.7rem;
+  left: 0.7rem;
+  background: var(--brass);
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.85rem;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 2px;
+}
+.lot-card__timer {
+  position: absolute;
+  bottom: 0.7rem;
+  right: 0.7rem;
+  background: rgba(14,34,51,0.85);
+  color: var(--foam);
+  font-family: var(--font-data);
+  font-size: 0.75rem;
+  padding: 0.25rem 0.55rem;
+  border-radius: 2px;
+}
+.lot-card__body { padding: 1rem 1.1rem 1.2rem; display: flex; flex-direction: column; gap: 0.4rem; flex: 1; }
+.lot-card__title { font-family: var(--font-display); font-size: 1.05rem; font-weight: 500; margin: 0; }
+.lot-card__meta { font-size: 0.82rem; color: #5A6772; }
+.lot-card__price-row {
+  margin-top: auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding-top: 0.7rem;
+  border-top: 1px dashed #D8D2C2;
+}
+.lot-card__price-label { font-size: 0.72rem; color: #5A6772; text-transform: uppercase; letter-spacing: 0.05em; }
+.lot-card__price { font-family: var(--font-data); font-size: 1.15rem; font-weight: 600; color: var(--buoy); }
+
+/* ---------- Détail du lot ---------- */
+.lot-detail { max-width: 1100px; margin: 0 auto; padding: 2rem; display: grid; grid-template-columns: 1.4fr 1fr; gap: 2.5rem; }
+@media (max-width: 860px) { .lot-detail { grid-template-columns: 1fr; } }
+.lot-detail__media { aspect-ratio: 4/3; background: linear-gradient(135deg, var(--mistral), var(--ink)); border-radius: var(--radius); }
+.lot-detail h1 { font-family: var(--font-display); font-size: 2rem; margin: 1.2rem 0 0.4rem; }
+.spec-table { width: 100%; border-collapse: collapse; margin: 1.2rem 0; font-size: 0.92rem; }
+.spec-table td { padding: 0.5rem 0; border-bottom: 1px solid #E4DFD3; }
+.spec-table td:first-child { color: #5A6772; width: 40%; }
+
+.bid-panel {
+  border: 1px solid #E4DFD3;
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  position: sticky;
+  top: 1.5rem;
+  height: fit-content;
+  background: var(--foam);
+}
+.bid-panel__timer {
+  font-family: var(--font-data);
+  font-size: 1.8rem;
+  color: var(--buoy);
+  text-align: center;
+  padding: 0.8rem 0;
+  background: var(--chalk);
+  border-radius: var(--radius);
+  margin-bottom: 1rem;
+}
+.bid-panel__current { text-align: center; margin-bottom: 1.2rem; }
+.bid-panel__current-label { font-size: 0.78rem; color: #5A6772; text-transform: uppercase; letter-spacing: 0.05em; }
+.bid-panel__current-amount { font-family: var(--font-data); font-size: 2.2rem; font-weight: 600; }
+.bid-form { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+.bid-form input {
+  flex: 1;
+  font-family: var(--font-data);
+  font-size: 1rem;
+  padding: 0.7rem;
+  border: 1px solid #C9C2B2;
+  border-radius: var(--radius);
+}
+.price-breakdown { font-size: 0.85rem; border-top: 1px solid #E4DFD3; padding-top: 0.9rem; }
+.price-breakdown__row { display: flex; justify-content: space-between; padding: 0.25rem 0; color: #5A6772; }
+.price-breakdown__row--total { color: var(--ink); font-weight: 600; border-top: 1px dashed #D8D2C2; margin-top: 0.4rem; padding-top: 0.5rem; }
+.bid-history { margin-top: 1.2rem; font-family: var(--font-data); font-size: 0.78rem; max-height: 160px; overflow-y: auto; }
+.bid-history__row { display: flex; justify-content: space-between; padding: 0.3rem 0; border-bottom: 1px solid #EFEBE0; color: #5A6772; }
+
+/* ---------- Footer ---------- */
+.site-footer {
+  background: var(--ink);
+  color: #AAB8C2;
+  padding: 2.5rem 2rem;
+  margin-top: 3rem;
+  font-size: 0.85rem;
+}
+.site-footer strong { color: var(--foam); }
