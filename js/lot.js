@@ -53,7 +53,7 @@ async function loadLot() {
 
   const { data: bids } = await supabaseClient
     .from('bids')
-    .select('amount, created_at, profiles(full_name)')
+    .select('amount, created_at, is_auto_bid, profiles(full_name)')
     .eq('lot_id', lotId)
     .order('amount', { ascending: false })
     .limit(20);
@@ -62,7 +62,7 @@ async function loadLot() {
     ...lot,
     category_flag: lot.categories?.flag_code || '·',
     category_slug: lot.categories?.slug || 'equipement',
-    bids: (bids || []).map(b => ({ amount: b.amount, created_at: b.created_at, bidder: b.profiles?.full_name || 'Enchérisseur' })),
+    bids: (bids || []).map(b => ({ amount: b.amount, created_at: b.created_at, is_auto_bid: b.is_auto_bid, bidder: b.profiles?.full_name || 'Enchérisseur' })),
   };
   renderLot();
 
@@ -100,7 +100,7 @@ function renderLot() {
   const minBid = l.current_price + l.bid_increment;
   document.getElementById('bid-amount').min = minBid;
   document.getElementById('bid-amount').value = minBid;
-  document.getElementById('bid-min-hint').textContent = `Minimum : ${formatEUR(minBid)}`;
+  document.getElementById('bid-min-hint').textContent = `Plafond minimum : ${formatEUR(minBid)}`;
 
   document.getElementById('one-boat-note').style.display = l.category_slug !== 'equipement' ? 'block' : 'none';
 
@@ -188,17 +188,17 @@ function renderSpecPanelContent(key, value) {
 function renderBreakdown(amount) {
   const b = computeBuyerPrice(amount);
   document.getElementById('price-breakdown').innerHTML = `
-    <div class="price-breakdown__row"><span>Prix marteau (si adjugé)</span><span>${formatEUR(b.hammerPrice)}</span></div>
+    <div class="price-breakdown__row"><span>Ton plafond</span><span>${formatEUR(b.hammerPrice)}</span></div>
     <div class="price-breakdown__row"><span>Frais de vente (18%)</span><span>${formatEUR(b.feeHT)}</span></div>
     <div class="price-breakdown__row"><span>TVA sur les frais (21%)</span><span>${formatEUR(b.feeVAT)}</span></div>
-    <div class="price-breakdown__row price-breakdown__row--total"><span>Total acheteur</span><span>${formatEUR(b.total)}</span></div>
+    <div class="price-breakdown__row price-breakdown__row--total"><span>Total maximum si tu gagnes</span><span>${formatEUR(b.total)}</span></div>
   `;
 }
 
 function renderHistory() {
   const rows = currentLot.bids.map(b => `
     <div class="bid-history__row">
-      <span>${b.bidder}</span>
+      <span>${b.bidder}${b.is_auto_bid ? ' <span style="color:#5A6772;">(auto)</span>' : ''}</span>
       <span>${formatEUR(b.amount)}</span>
     </div>
   `).join('');
@@ -213,8 +213,15 @@ document.getElementById('bid-amount').addEventListener('input', (e) => {
 document.getElementById('bid-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const amount = Number(document.getElementById('bid-amount').value);
+  const commitment = document.getElementById('bid-commitment').checked;
   const feedback = document.getElementById('bid-feedback');
   const isConfigured = !SUPABASE_URL.includes('TON-PROJET');
+
+  if (!commitment) {
+    feedback.textContent = "Coche la case d'engagement pour enchérir.";
+    feedback.style.color = 'var(--buoy)';
+    return;
+  }
 
   if (currentLot && new Date(currentLot.ends_at).getTime() <= Date.now()) {
     feedback.textContent = 'Cette enchère est terminée — plus aucune enchère n\'est possible.';
@@ -235,13 +242,14 @@ document.getElementById('bid-form').addEventListener('submit', async (e) => {
     return;
   }
 
-  const { error } = await supabaseClient.rpc('place_bid', { p_lot_id: lotId, p_amount: amount });
+  const { error } = await supabaseClient.rpc('place_bid', { p_lot_id: lotId, p_max_amount: amount, p_commitment: commitment });
   if (error) {
     feedback.textContent = error.message;
     feedback.style.color = 'var(--buoy)';
   } else {
-    feedback.textContent = 'Enchère enregistrée.';
+    feedback.textContent = 'Plafond enregistré — on enchérit pour toi automatiquement si besoin.';
     feedback.style.color = 'var(--mistral)';
+    document.getElementById('bid-commitment').checked = false;
   }
 });
 
