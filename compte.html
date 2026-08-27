@@ -62,6 +62,20 @@
     <a href="encheres.html">Enchères en cours</a>
     <a href="vendre.html">Vendre un bateau</a>
     <a href="#" class="btn btn--ghost" id="nav-login">Se connecter</a>
+
+    <div class="user-menu" id="user-menu" style="display:none;">
+      <button type="button" class="btn btn--ghost" id="user-menu-toggle">👤 <span id="user-menu-label"></span></button>
+      <div class="user-menu__dropdown" id="user-menu-dropdown">
+        <div class="user-menu__header">
+          <strong id="user-menu-name"></strong>
+          <span id="user-menu-email"></span>
+        </div>
+        <a href="compte.html">Mon profil</a>
+        <a href="compte.html#activite">Mon activité</a>
+        <a href="admin.html" id="user-menu-admin-link" style="display:none;">Modération</a>
+        <button type="button" id="user-menu-logout">Se déconnecter</button>
+      </div>
+    </div>
   </nav>
 </header>
 
@@ -590,6 +604,14 @@ document.querySelectorAll('#account-tabs .spec-tab').forEach(tab => {
     document.querySelector(`.spec-panel[data-panel="${tab.dataset.tab}"]`).classList.add('active');
   });
 });
+
+// Ouvre directement l'onglet "Mon activité" si on arrive via compte.html#activite
+if (location.hash === '#activite') {
+  document.querySelectorAll('#account-tabs .spec-tab').forEach(t => t.setAttribute('aria-selected', 'false'));
+  document.querySelector('#account-tabs .spec-tab[data-tab="activite"]').setAttribute('aria-selected', 'true');
+  document.querySelectorAll('.account-wrap > .spec-panel').forEach(p => p.classList.remove('active'));
+  document.querySelector('.spec-panel[data-panel="activite"]').classList.add('active');
+}
 
 init();
 </script>
