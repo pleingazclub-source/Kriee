@@ -28,6 +28,16 @@
   }
   .moderation-note--deleted { background: #F1EEE6; border-left-color: #5A6772; }
   .moderation-note strong { display: block; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 0.15rem; }
+
+  .sale-card { border: 1px solid #E4DFD3; border-radius: var(--radius); padding: 1.2rem; margin-bottom: 1rem; }
+  .sale-card__top { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap; }
+  .sale-card__title { font-family: var(--font-display); font-size: 1.05rem; margin: 0 0 0.2rem; }
+  .sale-card__price { font-family: var(--font-data); font-size: 1.3rem; font-weight: 600; color: var(--buoy); }
+  .sale-card__actions { display: flex; gap: 0.6rem; margin-top: 1rem; flex-wrap: wrap; }
+  .sale-card__waiting { font-size: 0.85rem; color: #5A6772; margin-top: 0.8rem; }
+  .sale-card__contact { background: var(--chalk); border-radius: 3px; padding: 0.9rem 1.1rem; margin-top: 1rem; font-size: 0.9rem; }
+  .sale-card__contact strong { display: block; margin-bottom: 0.3rem; }
+  .sale-card__cancelled { color: var(--buoy); font-size: 0.85rem; margin-top: 0.6rem; }
   .gate { max-width: 480px; margin: 4rem auto; padding: 2rem; text-align: center; }
 </style>
 </head>
@@ -61,6 +71,35 @@
 <main class="account-wrap" id="account-content" style="display:none;">
 
   <section class="account-section">
+    <h2>Mon profil</h2>
+    <p style="color:#5A6772; font-size:0.88rem; margin-bottom:1.2rem;">Le nom complet et le téléphone servent à identifier tes enchères/annonces côté équipe, et à échanger tes coordonnées avec l'autre partie une fois une vente confirmée. Le pseudo, lui, est ce que <strong>les autres utilisateurs voient</strong> (historique d'enchères, etc.) — ton nom réel n'est jamais affiché publiquement.</p>
+    <form id="profile-form" style="max-width:420px;">
+      <div class="field" style="margin-bottom:1rem;">
+        <label for="profile-email" style="display:block; font-size:0.85rem; margin-bottom:0.35rem; color:#5A6772;">Email</label>
+        <input type="email" id="profile-email" disabled style="width:100%; padding:0.6rem; border:1px solid #E4DFD3; border-radius:3px; background:var(--chalk); color:#5A6772;">
+      </div>
+      <div class="field" style="margin-bottom:1rem;">
+        <label for="profile-pseudo" style="display:block; font-size:0.85rem; margin-bottom:0.35rem; color:#5A6772;">Pseudo (visible publiquement)</label>
+        <input type="text" id="profile-pseudo" placeholder="Ex. SkipperVar83" style="width:100%; padding:0.6rem; border:1px solid #C9C2B2; border-radius:3px;">
+      </div>
+      <div class="field" style="margin-bottom:1rem;">
+        <label for="profile-name" style="display:block; font-size:0.85rem; margin-bottom:0.35rem; color:#5A6772;">Nom complet (privé, jamais public)</label>
+        <input type="text" id="profile-name" placeholder="Prénom Nom" style="width:100%; padding:0.6rem; border:1px solid #C9C2B2; border-radius:3px;">
+      </div>
+      <div class="field" style="margin-bottom:1rem;">
+        <label for="profile-phone" style="display:block; font-size:0.85rem; margin-bottom:0.35rem; color:#5A6772;">Téléphone</label>
+        <input type="tel" id="profile-phone" placeholder="06 12 34 56 78" style="width:100%; padding:0.6rem; border:1px solid #C9C2B2; border-radius:3px;">
+      </div>
+      <div class="field" style="margin-bottom:1.2rem;">
+        <label for="profile-city" style="display:block; font-size:0.85rem; margin-bottom:0.35rem; color:#5A6772;">Ville</label>
+        <input type="text" id="profile-city" placeholder="Toulon" style="width:100%; padding:0.6rem; border:1px solid #C9C2B2; border-radius:3px;">
+      </div>
+      <button type="submit" class="btn btn--primary btn--sm" style="padding:0.6rem 1.2rem;">Enregistrer</button>
+      <p id="profile-feedback" style="font-size:0.85rem; margin-top:0.7rem;" role="status"></p>
+    </form>
+  </section>
+
+  <section class="account-section">
     <h2>Mes favoris</h2>
     <table class="account-table" id="my-favorites-table">
       <thead>
@@ -86,11 +125,23 @@
     <h2>Mes lots en vente</h2>
     <table class="account-table" id="my-lots-table">
       <thead>
-        <tr><th></th><th>Lot</th><th>Prix départ</th><th>Enchère actuelle</th><th>Statut</th><th></th></tr>
+        <tr><th></th><th>Lot</th><th>Prix départ</th><th>Réserve</th><th>Enchère actuelle</th><th>Statut</th><th></th></tr>
       </thead>
       <tbody id="my-lots-rows"></tbody>
     </table>
     <p class="empty-state" id="my-lots-empty" style="display:none;">Tu n'as encore déposé aucun lot.</p>
+  </section>
+
+  <section class="account-section">
+    <h2>Mes ventes à finaliser</h2>
+    <div id="my-sales-list"></div>
+    <p class="empty-state" id="my-sales-empty" style="display:none;">Aucune vente à finaliser pour l'instant.</p>
+  </section>
+
+  <section class="account-section">
+    <h2>Mes achats à finaliser</h2>
+    <div id="my-purchases-list"></div>
+    <p class="empty-state" id="my-purchases-empty" style="display:none;">Aucun achat à finaliser pour l'instant.</p>
   </section>
 
 </main>
@@ -106,9 +157,12 @@ async function init() {
     return;
   }
   document.getElementById('account-content').style.display = 'block';
+  loadMyProfile(session.user);
   loadMyFavorites(session.user.id);
   loadMyBids(session.user.id);
   loadMyLots(session.user.id);
+  loadMySales(session.user.id);
+  loadMyPurchases(session.user.id);
 }
 
 async function loadMyFavorites(userId) {
@@ -165,6 +219,7 @@ async function loadMyLots(userId) {
         </div>` : ''}
       </td>
       <td>${formatEUR(l.starting_price)}</td>
+      <td>${formatEUR(l.reserve_price)}</td>
       <td>${formatEUR(l.current_price)}</td>
       <td><span class="status-pill status-pill--${statusPillClass(l)}" style="font-family:var(--font-data); font-size:0.7rem; padding:0.2rem 0.55rem; border-radius:999px; background:#F1EEE6; color:#5A6772;">${l.status}</span></td>
       <td style="white-space:nowrap;">
@@ -215,6 +270,162 @@ async function loadMyBids(userId) {
   `;
   }).join('');
 }
+
+// ---------- Mes ventes (côté vendeur) ----------
+async function loadMySales(userId) {
+  const { data, error } = await supabaseClient
+    .from('sales')
+    .select('*, lots(title, cover_image_url, region)')
+    .eq('seller_id', userId)
+    .neq('status', 'cancelled')
+    .order('created_at', { ascending: false });
+
+  const list = document.getElementById('my-sales-list');
+  if (error || !data || data.length === 0) {
+    document.getElementById('my-sales-empty').style.display = 'block';
+    return;
+  }
+
+  list.innerHTML = data.map(s => saleCardHTML(s, 'seller')).join('');
+  wireSaleActions();
+}
+
+// ---------- Mes achats (côté acheteur) ----------
+async function loadMyPurchases(userId) {
+  const { data, error } = await supabaseClient
+    .from('sales')
+    .select('*, lots(title, cover_image_url, region)')
+    .eq('buyer_id', userId)
+    .neq('status', 'cancelled')
+    .order('created_at', { ascending: false });
+
+  const list = document.getElementById('my-purchases-list');
+  if (error || !data || data.length === 0) {
+    document.getElementById('my-purchases-empty').style.display = 'block';
+    return;
+  }
+
+  list.innerHTML = data.map(s => saleCardHTML(s, 'buyer')).join('');
+  wireSaleActions();
+}
+
+function saleCardHTML(s, role) {
+  const lot = s.lots;
+  const myDecision = role === 'seller' ? s.seller_accepted : s.buyer_confirmed;
+  const theirDecision = role === 'seller' ? s.buyer_confirmed : s.seller_accepted;
+  const theirLabel = role === 'seller' ? "L'acheteur" : 'Le vendeur';
+
+  let actionsHTML = '';
+  if (s.status === 'confirmed') {
+    actionsHTML = `<div class="sale-card__contact" id="contact-${s.id}">
+      <button type="button" class="btn btn--ghost btn--sm" data-sale-reveal="${s.id}">Voir les coordonnées</button>
+    </div>`;
+  } else if (myDecision === null || myDecision === undefined) {
+    actionsHTML = role === 'seller'
+      ? `<div class="sale-card__actions">
+           <button type="button" class="btn btn--primary btn--sm" data-sale-action="accept" data-sale-id="${s.id}">Accepter la vente</button>
+           <button type="button" class="btn--danger btn--sm" data-sale-action="reject" data-sale-id="${s.id}">Refuser</button>
+         </div>`
+      : `<div class="sale-card__actions">
+           <button type="button" class="btn btn--primary btn--sm" data-sale-action="confirm" data-sale-id="${s.id}">Je m'engage à payer</button>
+           <button type="button" class="btn--danger btn--sm" data-sale-action="cancel" data-sale-id="${s.id}">Annuler</button>
+         </div>`;
+  } else {
+    actionsHTML = `<p class="sale-card__waiting">En attente de ${theirLabel.toLowerCase()} (tu as déjà répondu).</p>`;
+  }
+
+  return `
+    <div class="sale-card">
+      <div class="sale-card__top">
+        <div>
+          <p class="sale-card__title">${lot?.title || 'Lot'}</p>
+          <span style="color:#5A6772; font-size:0.85rem;">${lot?.region || ''}</span>
+        </div>
+        <span class="sale-card__price">${formatEUR(role === 'seller' ? s.hammer_price : s.buyer_total_price)}</span>
+      </div>
+      ${actionsHTML}
+    </div>
+  `;
+}
+
+function wireSaleActions() {
+  document.querySelectorAll('button[data-sale-action]').forEach(btn => {
+    btn.onclick = async () => {
+      const { action, saleId } = btn.dataset;
+      btn.disabled = true;
+      let error;
+      if (action === 'accept') ({ error } = await supabaseClient.rpc('seller_respond_to_sale', { p_sale_id: saleId, p_accept: true }));
+      else if (action === 'reject') ({ error } = await supabaseClient.rpc('seller_respond_to_sale', { p_sale_id: saleId, p_accept: false }));
+      else if (action === 'confirm') ({ error } = await supabaseClient.rpc('buyer_confirm_sale', { p_sale_id: saleId, p_confirm: true }));
+      else if (action === 'cancel') ({ error } = await supabaseClient.rpc('buyer_confirm_sale', { p_sale_id: saleId, p_confirm: false }));
+
+      if (error) { alert('Erreur : ' + error.message); btn.disabled = false; return; }
+
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      loadMySales(session.user.id);
+      loadMyPurchases(session.user.id);
+    };
+  });
+
+  document.querySelectorAll('button[data-sale-reveal]').forEach(btn => {
+    btn.onclick = async () => {
+      const saleId = btn.dataset.saleReveal;
+      const { data, error } = await supabaseClient.rpc('get_sale_contact', { p_sale_id: saleId });
+      const container = document.getElementById(`contact-${saleId}`);
+      if (error || !data || !data[0]) {
+        container.innerHTML = `<p style="color:var(--buoy); font-size:0.85rem;">Impossible de récupérer les coordonnées : ${error?.message || 'inconnu'}</p>`;
+        return;
+      }
+      const c = data[0];
+      container.innerHTML = `
+        <strong>Coordonnées de l'autre partie</strong>
+        ${c.full_name ? `${c.full_name}<br>` : ''}
+        ${c.email || ''}${c.phone ? ` — ${c.phone}` : ''}
+        <p style="font-size:0.78rem; color:#5A6772; margin-top:0.5rem;">Le paiement et la livraison s'organisent directement entre vous pour l'instant — Kriee n'intervient pas encore dans cette étape.</p>
+      `;
+    };
+  });
+}
+
+// ---------- Mon profil ----------
+async function loadMyProfile(user) {
+  document.getElementById('profile-email').value = user.email || '';
+
+  const { data, error } = await supabaseClient
+    .from('profiles')
+    .select('full_name, phone, city, pseudo')
+    .eq('id', user.id)
+    .single();
+
+  if (error || !data) return; // profil pas encore créé par le trigger, laisse les champs vides
+  document.getElementById('profile-name').value = data.full_name || '';
+  document.getElementById('profile-phone').value = data.phone || '';
+  document.getElementById('profile-city').value = data.city || '';
+  document.getElementById('profile-pseudo').value = data.pseudo || '';
+}
+
+document.getElementById('profile-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const feedback = document.getElementById('profile-feedback');
+  const { data: { session } } = await supabaseClient.auth.getSession();
+
+  const { error } = await supabaseClient.from('profiles').update({
+    full_name: document.getElementById('profile-name').value.trim() || null,
+    phone: document.getElementById('profile-phone').value.trim() || null,
+    city: document.getElementById('profile-city').value.trim() || null,
+    pseudo: document.getElementById('profile-pseudo').value.trim() || null,
+  }).eq('id', session.user.id);
+
+  if (error) {
+    feedback.textContent = error.code === '23505'
+      ? 'Ce pseudo est déjà pris par quelqu\'un d\'autre — choisis-en un autre.'
+      : 'Erreur : ' + error.message;
+    feedback.style.color = 'var(--buoy)';
+  } else {
+    feedback.textContent = 'Profil enregistré.';
+    feedback.style.color = 'var(--mistral)';
+  }
+});
 
 init();
 </script>
