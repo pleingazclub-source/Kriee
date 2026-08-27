@@ -103,6 +103,12 @@
         </div>
       </div>
 
+      <div class="field">
+        <label for="address">Adresse précise (facultatif)</label>
+        <input type="text" id="address" placeholder="Au minimum une ville — ex. Toulon, ou une adresse complète pour plus de précision">
+        <p class="hint" id="geocode-status" style="margin:0.4rem 0 0;">Une ville suffit déjà à situer le lot correctement. Une adresse complète (rue, code postal) affine encore le tri par proximité. Sans rien indiquer ici, on se rabat sur le port et la région ci-dessus (moins précis).</p>
+      </div>
+
       <div class="field-row">
         <div class="field">
           <label for="starting">Prix de départ (€)</label>
@@ -382,6 +388,32 @@ function updateDurationHint() {
     : 'Un bateau demande souvent une visite avant d\'enchérir — un délai plus long augmente tes chances de vente.';
 }
 syncDurationDefault();
+
+// ---------- Aperçu en direct du géocodage — rassure le vendeur sans jamais bloquer la saisie ----------
+let geocodePreviewTimeout = null;
+async function previewGeocode() {
+  const status = document.getElementById('geocode-status');
+  const preciseAddress = document.getElementById('address').value.trim();
+  const query = preciseAddress || [document.getElementById('port').value, document.getElementById('region').value, 'France'].filter(Boolean).join(', ');
+  if (!query || query === document.getElementById('region').value + ', France') {
+    status.textContent = 'Une ville suffit déjà à situer le lot correctement. Une adresse complète (rue, code postal) affine encore le tri par proximité. Sans rien indiquer ici, on se rabat sur le port et la région ci-dessus (moins précis).';
+    return;
+  }
+  status.textContent = 'Localisation en cours...';
+  const coords = await geocodeAddress(query);
+  status.textContent = coords
+    ? '📍 Localisation trouvée — les acheteurs pourront trier ce lot par proximité.'
+    : "⚠️ Adresse non localisée pour l'instant — le tri par proximité se rabattra sur la région seule. Le lot sera quand même publié normalement.";
+  status.style.color = coords ? 'var(--mistral)' : '#5A6772';
+}
+document.getElementById('address').addEventListener('blur', () => {
+  clearTimeout(geocodePreviewTimeout);
+  geocodePreviewTimeout = setTimeout(previewGeocode, 200);
+});
+document.getElementById('port').addEventListener('blur', () => {
+  clearTimeout(geocodePreviewTimeout);
+  geocodePreviewTimeout = setTimeout(previewGeocode, 200);
+});
 
 showStep();
 
@@ -707,7 +739,9 @@ document.getElementById('sell-form').addEventListener('submit', async (e) => {
 
   // Géocodage best-effort de l'adresse — n'attend jamais plus de 3s (voir geocodeAddress), et un échec
   // ne bloque jamais la création du lot : coords reste simplement à null, le repli région prend le relais côté affichage.
-  const address = [document.getElementById('port').value, document.getElementById('region').value, 'France'].filter(Boolean).join(', ');
+  // L'adresse précise (si renseignée) prime sur le port + région, moins fiable pour une localisation exacte.
+  const preciseAddress = document.getElementById('address').value.trim();
+  const address = preciseAddress || [document.getElementById('port').value, document.getElementById('region').value, 'France'].filter(Boolean).join(', ');
   const coords = await geocodeAddress(address);
 
   // Upload des photos/vidéo avant l'insertion — le lot n'est créé qu'une fois les fichiers en ligne
