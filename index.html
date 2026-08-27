@@ -28,7 +28,7 @@
     <span class="brand__sub">SUD DE LA FRANCE</span>
   </a>
   <nav class="site-nav">
-    <a href="index.html">Enchères en cours</a>
+    <a href="encheres.html">Enchères en cours</a>
     <a href="vendre.html">Vendre un bateau</a>
     <a href="#comment-ca-marche">Comment ça marche</a>
     <a href="#" class="btn btn--ghost" id="nav-login">Se connecter</a>
@@ -39,12 +39,12 @@
   <div class="hero__gust" aria-hidden="true"></div>
   <div class="hero__inner">
     <p class="hero__eyebrow">Toulon · Marseille · La Ciotat · Sète — extension Sud en cours</p>
-    <h1>Le nautisme au vrai prix.</h1>
+    <h1>Le vrai prix, pas l'annonce qui traîne.</h1>
     <p class="hero__tagline">Pour ceux qui veulent vendre. <span style="color:var(--buoy)">Vraiment.</span></p>
     <p>Votre attachement fixe un prix. Le marché en décide un autre — en direct, pas dans 587 jours.</p>
     <div class="hero__actions">
-      <a href="#lots" class="btn btn--primary">Voir les enchères en cours</a>
-      <a href="vendre.html" class="btn btn--ghost" style="border-color:var(--foam); color:var(--foam)">Vendre mon bateau ou du matériel</a>
+      <a href="encheres.html" class="btn btn--primary">Voir les enchères en cours</a>
+      <a href="vendre.html" class="btn btn--ghost" style="border-color:var(--foam); color:var(--foam)">Mettre un bateau en vente</a>
     </div>
 
     <div class="fee-strip">
@@ -68,24 +68,13 @@
   </div>
 </section>
 
-<div class="filters" role="group" aria-label="Filtrer les lots">
-  <button class="chip" data-filter="all" aria-pressed="true">Tous les lots</button>
-  <button class="chip" data-filter="voile">Voile</button>
-  <button class="chip" data-filter="moteur">Moteur</button>
-  <button class="chip" data-filter="semi-rigide">Semi-rigide</button>
-  <button class="chip" data-filter="equipement">Équipement</button>
-</div>
-
-<main id="lots" class="lots-grid" aria-live="polite">
-  <!-- rempli en JS, avec squelette de démo si Supabase n'est pas encore configuré -->
-</main>
-
 <div class="divider" aria-hidden="true"><span class="divider__mark"></span></div>
 
 <footer class="site-footer" id="comment-ca-marche">
   <strong>Kriee</strong> — plateforme d'enchères nautiques entre particuliers, lancée dans le Sud de la France.
   Comment ça marche : le vendeur dépose son lot avec un prix de réserve confidentiel · le lot passe en direct à date fixe ·
-  chaque enchère au-delà du prix de réserve prolonge la clôture de 3 minutes · l'acheteur règle le prix marteau + 18% de frais + TVA sur ces frais ·
+  chaque enchère au-delà du prix de réserve prolonge la clôture de 3 minutes · un acheteur ne peut être en tête que sur un seul bateau à la fois (l'accastillage reste libre) ·
+  l'acheteur règle le prix marteau + 18% de frais + TVA sur ces frais ·
   le vendeur est payé au prix marteau, sans retenue.
 </footer>
 

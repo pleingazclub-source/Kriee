@@ -47,7 +47,7 @@
     <span class="brand__sub">SUD DE LA FRANCE</span>
   </a>
   <nav class="site-nav">
-    <a href="index.html">Enchères en cours</a>
+    <a href="encheres.html">Enchères en cours</a>
     <a href="vendre.html">Vendre un bateau</a>
     <a href="#" class="btn btn--ghost" id="nav-login">Se connecter</a>
   </nav>
@@ -607,6 +607,11 @@ document.getElementById('sell-form').addEventListener('submit', async (e) => {
     specs.securite = checksToObject('securite-checks');
   }
 
+  // Géocodage best-effort de l'adresse — n'attend jamais plus de 3s (voir geocodeAddress), et un échec
+  // ne bloque jamais la création du lot : coords reste simplement à null, le repli région prend le relais côté affichage.
+  const address = [document.getElementById('port').value, document.getElementById('region').value, 'France'].filter(Boolean).join(', ');
+  const coords = await geocodeAddress(address);
+
   // Upload des photos/vidéo avant l'insertion — le lot n'est créé qu'une fois les fichiers en ligne
   const photoFiles = selectedPhotos;
   const videoFile = document.getElementById('video').files[0];
@@ -642,6 +647,8 @@ document.getElementById('sell-form').addEventListener('submit', async (e) => {
     reserve_price: Number(document.getElementById('reserve').value),
     bid_increment: Number(document.getElementById('increment').value),
     cover_image_url: imageUrls[0] || null,
+    lat: coords?.lat ?? null,
+    lng: coords?.lng ?? null,
     images: imageUrls,
     video_url: videoUrl,
     specs,
