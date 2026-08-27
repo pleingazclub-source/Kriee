@@ -285,7 +285,7 @@ a { color: inherit; }
 /* ---------- Grille de lots ---------- */
 .lots-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: 1.5rem;
   padding: 2rem;
   max-width: 1400px;
@@ -310,6 +310,10 @@ a { color: inherit; }
   background-position: center;
   position: relative;
 }
+@media (max-width: 1000px) {
+  .lots-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
 .lot-card__flag {
   position: absolute;
   top: 0.7rem;
@@ -565,6 +569,7 @@ a { color: inherit; }
     padding-right: 1.2rem;
   }
   .page-band { padding: 1.6rem 1.2rem; }
+  .lots-grid { grid-template-columns: 1fr; }
 
   .field-row { flex-direction: column; gap: 0; }
   .admin-table { display: block; overflow-x: auto; white-space: nowrap; }
