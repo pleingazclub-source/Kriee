@@ -242,16 +242,24 @@
 
     <!-- ÉTAPE 5 : récapitulatif -->
     <section class="spec-panel" data-step="5">
-      <p class="section-title">Dernière vérification</p>
-      <p class="hint">Relis les infos saisies dans les étapes précédentes avant d'envoyer. Le lot sera visible par l'équipe de modération, pas encore publiquement.</p>
-      <div class="field">
-        <label><input type="checkbox" id="confirm-honest" style="width:auto; display:inline-block; margin-right:0.5rem;" required>Je certifie que les informations fournies sont exactes.</label>
+      <div id="step5-form-content">
+        <p class="section-title">Dernière vérification</p>
+        <p class="hint">Relis les infos saisies dans les étapes précédentes avant d'envoyer. Le lot sera visible par l'équipe de modération, pas encore publiquement.</p>
+        <div class="field">
+          <label><input type="checkbox" id="confirm-honest" style="width:auto; display:inline-block; margin-right:0.5rem;" required>Je certifie que les informations fournies sont exactes.</label>
+        </div>
+        <button type="submit" class="btn btn--primary" style="width:100%; padding:0.85rem;">Soumettre le lot pour modération</button>
+        <p id="sell-feedback" style="font-size:0.85rem; margin-top:0.8rem;" role="status"></p>
       </div>
-      <button type="submit" class="btn btn--primary" style="width:100%; padding:0.85rem;">Soumettre le lot pour modération</button>
-      <p id="sell-feedback" style="font-size:0.85rem; margin-top:0.8rem;" role="status"></p>
+
+      <div id="step5-success" style="display:none; text-align:center; padding:2rem 0;">
+        <p class="section-title" style="color:var(--mistral);">✓ Lot soumis</p>
+        <p class="hint">Il passera en ligne après validation par l'équipe de modération.</p>
+        <button type="button" class="btn btn--primary" id="new-lot-btn" style="margin-top:1rem;">Déposer un autre lot</button>
+      </div>
     </section>
 
-    <div class="wizard-nav">
+    <div class="wizard-nav" id="wizard-nav">
       <button type="button" class="btn btn--ghost" id="wizard-prev">Précédent</button>
       <button type="button" class="btn btn--primary" id="wizard-next">Suivant</button>
     </div>
@@ -388,6 +396,21 @@ document.getElementById('sell-form').addEventListener('input', saveDraft);
 document.getElementById('sell-form').addEventListener('change', saveDraft);
 document.getElementById('clear-draft').addEventListener('click', clearDraft);
 
+document.getElementById('new-lot-btn').addEventListener('click', () => {
+  document.getElementById('sell-form').reset();
+  document.getElementById('step5-form-content').style.display = 'block';
+  document.getElementById('step5-success').style.display = 'none';
+  document.getElementById('wizard-nav').style.display = 'flex';
+  document.getElementById('wizard-tabs').style.display = 'flex';
+  document.querySelector('.wizard-progress-row').style.display = 'flex';
+  document.getElementById('draft-status').textContent = '';
+  document.getElementById('sell-feedback').textContent = '';
+  stepIndex = 0;
+  syncRequiredFields();
+  showStep();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+
 restoreDraft();
 
 document.getElementById('sell-form').addEventListener('submit', async (e) => {
@@ -494,14 +517,12 @@ document.getElementById('sell-form').addEventListener('submit', async (e) => {
     feedback.textContent = error.message;
     feedback.style.color = 'var(--buoy)';
   } else {
-    feedback.textContent = 'Lot soumis. Il passera en ligne après modération.';
-    feedback.style.color = 'var(--mistral)';
     localStorage.removeItem(DRAFT_KEY);
-    document.getElementById('draft-status').textContent = '';
-    document.getElementById('clear-draft').style.display = 'none';
-    e.target.reset();
-    stepIndex = 0;
-    showStep();
+    document.getElementById('step5-form-content').style.display = 'none';
+    document.getElementById('step5-success').style.display = 'block';
+    document.getElementById('wizard-nav').style.display = 'none';
+    document.getElementById('wizard-tabs').style.display = 'none';
+    document.querySelector('.wizard-progress-row').style.display = 'none';
   }
   } catch (err) {
     feedback.textContent = 'Erreur inattendue : ' + err.message;
