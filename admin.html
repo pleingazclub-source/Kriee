@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Modération — Kriee</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .admin-wrap { max-width: 1100px; margin: 0 auto; padding: 2rem; }
+  .admin-filters { display: flex; gap: 0.6rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+  .admin-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+  .admin-table th { text-align: left; font-family: var(--font-data); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: #5A6772; padding: 0.6rem; border-bottom: 1px solid #C9C2B2; }
+  .admin-table td { padding: 0.7rem 0.6rem; border-bottom: 1px solid #E4DFD3; vertical-align: middle; }
+  .admin-table img { width: 46px; height: 46px; object-fit: cover; border-radius: 3px; vertical-align: middle; }
+  .status-pill { font-family: var(--font-data); font-size: 0.7rem; padding: 0.2rem 0.55rem; border-radius: 999px; text-transform: uppercase; }
+  .status-pill--draft { background: #F1EEE6; color: #5A6772; }
+  .status-pill--live { background: #DCEFE3; color: #1D6B3E; }
+  .status-pill--sold { background: #E4DFF6; color: #4B3B9C; }
+  .status-pill--cancelled { background: #F6DCD8; color: var(--buoy); }
+  .admin-actions { display: flex; gap: 0.4rem; }
+  .btn--sm { padding: 0.35rem 0.7rem; font-size: 0.78rem; }
+  .btn--danger { background: transparent; border: 1px solid var(--buoy); color: var(--buoy); border-radius: var(--radius); }
+  .btn--danger:hover { background: var(--buoy); color: var(--foam); }
+  .gate { max-width: 480px; margin: 4rem auto; padding: 2rem; text-align: center; }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <a href="index.html" class="brand">
+    <svg class="brand__mark" width="24" height="26" viewBox="0 0 24 26" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <line x1="5" y1="1" x2="5" y2="25" stroke="#0E2233" stroke-width="2"/>
+      <path d="M5 3 L21 8.5 L5 14 Z" fill="#C7401F"/>
+    </svg>
+    <span class="brand__word">Kri<span style="color:var(--buoy)">ee</span></span>
+    <span class="brand__sub">SUD DE LA FRANCE</span>
+  </a>
+  <nav class="site-nav">
+    <a href="index.html">Enchères en cours</a>
+    <a href="vendre.html">Vendre un bateau</a>
+    <a href="#" class="btn btn--ghost" id="nav-login">Se connecter</a>
+  </nav>
+</header>
+
+<div class="page-band page-band--slim">
+  <span class="page-band__back">Modération — réservé aux admins</span>
+</div>
+
+<div id="gate-denied" class="gate" style="display:none;">
+  <p>Accès réservé aux administrateurs.</p>
+  <a href="index.html" class="btn btn--primary">Retour aux enchères</a>
+</div>
+
+<main class="admin-wrap" id="admin-content" style="display:none;">
+  <div class="admin-filters" role="group">
+    <button class="chip" data-filter="draft" aria-pressed="true">En attente</button>
+    <button class="chip" data-filter="live">En ligne</button>
+    <button class="chip" data-filter="sold">Vendus</button>
+    <button class="chip" data-filter="unsold">Invendus</button>
+    <button class="chip" data-filter="cancelled">Refusés</button>
+    <button class="chip" data-filter="all">Tous</button>
+  </div>
+
+  <table class="admin-table">
+    <thead>
+      <tr>
+        <th></th>
+        <th>Lot</th>
+        <th>Vendeur</th>
+        <th>Prix départ</th>
+        <th>Statut</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="admin-rows"></tbody>
+  </table>
+  <p id="admin-empty" style="color:#5A6772; padding:1.5rem 0; display:none;">Aucun lot dans cette catégorie.</p>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase-client.js"></script>
+<script src="js/auth.js"></script>
+<script>
+let allLots = [];
+let activeFilter = 'draft';
+
+async function init() {
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (!session) {
+    document.getElementById('gate-denied').style.display = 'block';
+    document.getElementById('gate-denied').querySelector('p').textContent = 'Connecte-toi avec un compte administrateur.';
+    return;
+  }
+
+  const { data: profile } = await supabaseClient.from('profiles').select('is_admin').eq('id', session.user.id).single();
+  if (!profile || !profile.is_admin) {
+    document.getElementById('gate-denied').style.display = 'block';
+    return;
+  }
+
+  document.getElementById('admin-content').style.display = 'block';
+  loadLots();
+
+  supabaseClient.channel('admin:lots')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'lots' }, loadLots)
+    .subscribe();
+}
+
+async function loadLots() {
+  const { data, error } = await supabaseClient
+    .from('lots')
+    .select('*, categories(label), profiles(full_name)')
+    .order('created_at', { ascending: false });
+  if (error) { console.error(error); return; }
+  allLots = data;
+  render();
+}
+
+function render() {
+  const rows = document.getElementById('admin-rows');
+  const filtered = activeFilter === 'all' ? allLots : allLots.filter(l => l.status === activeFilter);
+
+  document.getElementById('admin-empty').style.display = filtered.length ? 'none' : 'block';
+
+  rows.innerHTML = filtered.map(l => `
+    <tr>
+      <td>${l.cover_image_url ? `<img src="${l.cover_image_url}">` : ''}</td>
+      <td><strong>${l.title}</strong><br><span style="color:#5A6772; font-size:0.8rem;">${l.categories?.label || ''} — ${l.region}</span></td>
+      <td>${l.profiles?.full_name || '—'}</td>
+      <td>${formatEUR(l.starting_price)}</td>
+      <td><span class="status-pill status-pill--${l.status === 'scheduled' ? 'draft' : l.status}">${l.status}</span></td>
+      <td class="admin-actions">
+        ${l.status === 'draft' ? `<button class="btn btn--primary btn--sm" data-action="publish" data-id="${l.id}">Publier</button>` : ''}
+        ${l.status === 'live' ? `<button class="btn btn--ghost btn--sm" data-action="unlist" data-id="${l.id}">Dépublier</button>` : ''}
+        ${l.status !== 'cancelled' ? `<button class="btn--danger btn--sm" data-action="reject" data-id="${l.id}">Refuser</button>` : ''}
+        <a href="lot.html?id=${l.id}" class="btn btn--ghost btn--sm" style="text-decoration:none;">Voir</a>
+      </td>
+    </tr>
+  `).join('');
+
+  rows.querySelectorAll('button[data-action]').forEach(btn => {
+    btn.addEventListener('click', () => handleAction(btn.dataset.action, btn.dataset.id));
+  });
+}
+
+async function handleAction(action, id) {
+  const updates = {
+    publish: { status: 'live', starts_at: new Date().toISOString(), ends_at: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7).toISOString() },
+    unlist: { status: 'draft' },
+    reject: { status: 'cancelled' },
+  }[action];
+  const { error } = await supabaseClient.from('lots').update(updates).eq('id', id);
+  if (error) alert('Erreur : ' + error.message);
+}
+
+document.querySelectorAll('.chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    document.querySelectorAll('.chip').forEach(c => c.setAttribute('aria-pressed', 'false'));
+    chip.setAttribute('aria-pressed', 'true');
+    activeFilter = chip.dataset.filter;
+    render();
+  });
+});
+
+init();
+</script>
+</body>
+</html>
