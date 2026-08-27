@@ -71,7 +71,6 @@ async function loadLot() {
 function renderLot() {
   const l = currentLot;
   document.getElementById('page-title').textContent = `${l.title} — Kriee`;
-  document.getElementById('lot-media').style.background = l.image || 'linear-gradient(135deg,#2C6E8E,#0E2233)';
   renderGallery(l);
   document.getElementById('lot-title').textContent = l.title;
   document.getElementById('lot-region').textContent = l.region;
@@ -103,15 +102,17 @@ function renderGallery(l) {
   const images = l.images && l.images.length ? l.images : (l.cover_image_url ? [l.cover_image_url] : []);
 
   if (images.length) {
-    media.style.background = `url('${images[0]}')`;
-    media.style.backgroundSize = 'cover';
-    media.style.backgroundPosition = 'center';
+    media.style.backgroundImage = `url('${images[0]}')`;
+  } else {
+    media.style.backgroundImage = l.image || 'linear-gradient(135deg,#2C6E8E,#0E2233)';
   }
+  media.style.backgroundSize = 'cover';
+  media.style.backgroundPosition = 'center';
 
   thumbs.innerHTML = images.map((url, i) => `<img src="${url}" class="${i === 0 ? 'active' : ''}" data-url="${url}">`).join('');
   thumbs.querySelectorAll('img').forEach(img => {
     img.addEventListener('click', () => {
-      media.style.background = `url('${img.dataset.url}')`;
+      media.style.backgroundImage = `url('${img.dataset.url}')`;
       media.style.backgroundSize = 'cover';
       media.style.backgroundPosition = 'center';
       thumbs.querySelectorAll('img').forEach(i => i.classList.remove('active'));
