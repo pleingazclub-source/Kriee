@@ -51,7 +51,7 @@ create table public.lots (
   starting_price numeric(10,2) not null,
   bid_increment numeric(10,2) not null default 100,
   current_price numeric(10,2) not null,
-  status text not null default 'draft' check (status in ('draft','scheduled','live','sold','unsold','cancelled')),
+  status text not null default 'draft' check (status in ('draft','scheduled','live','sold','unsold','cancelled','deleted')),
   starts_at timestamptz not null,
   ends_at timestamptz not null,
   cover_image_url text,
