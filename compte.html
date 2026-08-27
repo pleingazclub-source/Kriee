@@ -76,6 +76,13 @@
 
 <main class="account-wrap" id="account-content" style="display:none;">
 
+  <div class="spec-tabs" role="tablist" id="account-tabs">
+    <button class="spec-tab" data-tab="profil" aria-selected="true">Profil</button>
+    <button class="spec-tab" data-tab="activite" aria-selected="false">Mon activité</button>
+  </div>
+
+  <div class="spec-panel active" data-panel="profil">
+
   <section class="account-section">
     <h2>Mon profil</h2>
     <p style="color:#5A6772; font-size:0.88rem; margin-bottom:1.5rem;">Le nom complet et le téléphone servent à identifier tes enchères/annonces côté équipe, et à échanger tes coordonnées avec l'autre partie une fois une vente confirmée. Le pseudo, lui, est ce que <strong>les autres utilisateurs voient</strong> — ton nom réel n'est jamais affiché publiquement.</p>
@@ -180,6 +187,10 @@
     </div>
   </section>
 
+  </div>
+
+  <div class="spec-panel" data-panel="activite">
+
   <section class="account-section">
     <h2>Mes favoris</h2>
     <table class="account-table" id="my-favorites-table">
@@ -224,6 +235,8 @@
     <div id="my-purchases-list"></div>
     <p class="empty-state" id="my-purchases-empty" style="display:none;">Aucun achat à finaliser pour l'instant.</p>
   </section>
+
+  </div>
 
 </main>
 
@@ -567,6 +580,15 @@ document.getElementById('password-change-form').addEventListener('submit', async
     feedback.style.color = 'var(--mistral)';
     e.target.reset();
   }
+});
+
+document.querySelectorAll('#account-tabs .spec-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('#account-tabs .spec-tab').forEach(t => t.setAttribute('aria-selected', 'false'));
+    tab.setAttribute('aria-selected', 'true');
+    document.querySelectorAll('.account-wrap > .spec-panel').forEach(p => p.classList.remove('active'));
+    document.querySelector(`.spec-panel[data-panel="${tab.dataset.tab}"]`).classList.add('active');
+  });
 });
 
 init();
