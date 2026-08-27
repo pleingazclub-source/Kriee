@@ -74,16 +74,19 @@
       <div class="bid-panel__reserve-note" id="one-boat-note" style="display:none;">Tu ne peux être en tête que sur un seul bateau à la fois — l'accastillage reste libre</div>
     </div>
 
-    <form class="bid-form" id="bid-form">
-      <input type="number" id="bid-amount" step="1" required aria-label="Ton plafond maximum">
-      <button type="submit" class="btn btn--primary">Enchérir</button>
-    </form>
-    <p id="bid-min-hint" style="font-size:0.78rem; color:#5A6772; margin-top:-0.6rem;"></p>
-    <p class="hint" style="font-size:0.76rem; margin:0.5rem 0 0.8rem;">C'est ton plafond maximum, jamais visible des autres — on enchérit pour toi automatiquement, par palier, jusqu'à ce montant. Le prix affiché ne monte que si un autre acheteur te dépasse réellement.</p>
-    <label style="display:flex; align-items:flex-start; gap:0.5rem; font-size:0.82rem; margin-bottom:0.8rem; cursor:pointer;">
-      <input type="checkbox" id="bid-commitment" required style="margin-top:0.2rem;">
-      Je m'engage à payer si je remporte ce lot à ce prix ou en dessous.
-    </label>
+    <div id="bid-form-wrap">
+      <form class="bid-form" id="bid-form">
+        <input type="number" id="bid-amount" step="1" required aria-label="Ton plafond maximum">
+        <button type="submit" class="btn btn--primary">Enchérir</button>
+      </form>
+      <p id="bid-min-hint" style="font-size:0.78rem; color:#5A6772; margin-top:-0.6rem;"></p>
+      <p class="hint" style="font-size:0.76rem; margin:0.5rem 0 0.8rem;">C'est ton plafond maximum, jamais visible des autres — on enchérit pour toi automatiquement, par palier, jusqu'à ce montant. Le prix affiché ne monte que si un autre acheteur te dépasse réellement.</p>
+      <label style="display:flex; align-items:flex-start; gap:0.5rem; font-size:0.82rem; margin-bottom:0.8rem; cursor:pointer;">
+        <input type="checkbox" id="bid-commitment" required style="margin-top:0.2rem;">
+        Je m'engage à payer si je remporte ce lot à ce prix ou en dessous.
+      </label>
+    </div>
+    <p id="own-lot-note" style="display:none; font-size:0.85rem; color:#5A6772; background:var(--chalk); padding:0.8rem 1rem; border-radius:3px; margin-bottom:0.8rem;">C'est ton propre lot — tu ne peux pas enchérir dessus.</p>
     <p id="bid-feedback" style="font-size:0.85rem;" role="status"></p>
 
     <div class="price-breakdown" id="price-breakdown"></div>
