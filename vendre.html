@@ -40,12 +40,19 @@
   </nav>
 </header>
 
+<div class="page-band">
+  <p class="page-band__eyebrow">Dépôt d'un lot — Kriee</p>
+  <h1 class="page-band__title">Mettre un lot en vente</h1>
+</div>
+
 <main class="sell-wrap">
-  <h1>Mettre un lot en vente</h1>
   <p class="lead">0% de frais vendeur — vous êtes payé au prix marteau. Le lot passe en modération avant sa mise en ligne.</p>
 
   <div class="spec-tabs" role="tablist" id="wizard-tabs"></div>
-  <div class="wizard-progress"><div class="wizard-progress__bar" id="wizard-progress-bar"></div></div>
+  <div class="wizard-progress-row">
+    <div class="wizard-progress"><div class="wizard-progress__bar" id="wizard-progress-bar"></div></div>
+    <span class="wizard-progress__pct" id="wizard-progress-pct">20%</span>
+  </div>
 
   <form id="sell-form">
 
@@ -286,7 +293,9 @@ function showStep() {
   const target = document.querySelector(`.spec-panel[data-step="${steps[stepIndex]}"]`);
   if (target) target.classList.add('active');
   renderTabs();
-  document.getElementById('wizard-progress-bar').style.width = `${((stepIndex + 1) / steps.length) * 100}%`;
+  const pct = Math.round(((stepIndex + 1) / steps.length) * 100);
+  document.getElementById('wizard-progress-bar').style.width = `${pct}%`;
+  document.getElementById('wizard-progress-pct').textContent = `${pct}%`;
   document.getElementById('wizard-prev').style.visibility = stepIndex === 0 ? 'hidden' : 'visible';
   document.getElementById('wizard-next').style.display = stepIndex === steps.length - 1 ? 'none' : 'inline-block';
 }
