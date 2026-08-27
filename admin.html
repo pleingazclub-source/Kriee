@@ -85,6 +85,20 @@
     <a href="encheres.html">Enchères en cours</a>
     <a href="vendre.html">Vendre un bateau</a>
     <a href="#" class="btn btn--ghost" id="nav-login">Se connecter</a>
+
+    <div class="user-menu" id="user-menu" style="display:none;">
+      <button type="button" class="btn btn--ghost" id="user-menu-toggle">👤 <span id="user-menu-label"></span></button>
+      <div class="user-menu__dropdown" id="user-menu-dropdown">
+        <div class="user-menu__header">
+          <strong id="user-menu-name"></strong>
+          <span id="user-menu-email"></span>
+        </div>
+        <a href="compte.html">Mon profil</a>
+        <a href="compte.html#activite">Mon activité</a>
+        <a href="admin.html" id="user-menu-admin-link" style="display:none;">Modération</a>
+        <button type="button" id="user-menu-logout">Se déconnecter</button>
+      </div>
+    </div>
   </nav>
 </header>
 
@@ -157,6 +171,18 @@
 
   <div class="divider" aria-hidden="true" style="margin: 2.5rem auto;"><span class="divider__mark"></span></div>
 
+  <p class="revenue-dash__title" style="color:var(--ink); margin-bottom:1rem;">Utilisateurs</p>
+  <input type="search" id="users-search" placeholder="Rechercher par nom ou pseudo..." style="width:100%; max-width:360px; padding:0.6rem 0.8rem; border:1px solid #C9C2B2; border-radius:3px; margin-bottom:1rem; font-family:var(--font-body); font-size:0.9rem;">
+  <table class="admin-table">
+    <thead>
+      <tr><th>Pseudo (public)</th><th>Nom complet</th><th>Ville</th><th>Inscrit le</th><th>Actions</th></tr>
+    </thead>
+    <tbody id="users-rows"></tbody>
+  </table>
+  <p id="users-empty" style="color:#5A6772; padding:1rem 0; display:none;">Aucun utilisateur ne correspond à cette recherche.</p>
+
+  <div class="divider" aria-hidden="true" style="margin: 2.5rem auto;"><span class="divider__mark"></span></div>
+
   <p class="revenue-dash__title" style="color:var(--ink); margin-bottom:1rem;">Acheteurs signalés (désistements après vente acceptée)</p>
   <table class="admin-table">
     <thead>
@@ -217,6 +243,7 @@ async function init() {
   document.getElementById('admin-content').style.display = 'block';
   loadLots();
   loadFlaggedBuyers();
+  loadUsers();
 
   supabaseClient.channel('admin:lots')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'lots' }, loadLots)
@@ -432,6 +459,51 @@ async function loadFlaggedBuyers() {
     };
   });
 }
+
+let allUsers = [];
+
+async function loadUsers() {
+  const { data, error } = await supabaseClient
+    .from('profiles')
+    .select('id, full_name, pseudo, city, created_at')
+    .order('created_at', { ascending: false });
+
+  if (error || !data) return;
+  allUsers = data;
+  renderUsers();
+}
+
+function renderUsers() {
+  const query = document.getElementById('users-search').value.trim().toLowerCase();
+  const filtered = query
+    ? allUsers.filter(u => (u.full_name || '').toLowerCase().includes(query) || (u.pseudo || '').toLowerCase().includes(query))
+    : allUsers;
+
+  const rows = document.getElementById('users-rows');
+  document.getElementById('users-empty').style.display = filtered.length ? 'none' : 'block';
+
+  rows.innerHTML = filtered.map(u => `
+    <tr>
+      <td>${u.pseudo || '<span style="color:#5A6772;">— non défini —</span>'}</td>
+      <td>${u.full_name || '<span style="color:#5A6772;">—</span>'}</td>
+      <td>${u.city || '<span style="color:#5A6772;">—</span>'}</td>
+      <td>${u.created_at ? new Date(u.created_at).toLocaleDateString('fr-FR') : '—'}</td>
+      <td>${u.pseudo ? `<button type="button" class="btn--danger btn--sm" data-clear-pseudo="${u.id}">Effacer le pseudo</button>` : ''}</td>
+    </tr>
+  `).join('');
+
+  rows.querySelectorAll('button[data-clear-pseudo]').forEach(btn => {
+    btn.onclick = async () => {
+      if (!confirm('Effacer ce pseudo ? Utile en cas de pseudo inapproprié — le vendeur devra en choisir un autre pour pouvoir enchérir ou vendre.')) return;
+      const { error } = await supabaseClient.from('profiles').update({ pseudo: null }).eq('id', btn.dataset.clearPseudo);
+      if (error) { showToast('Erreur : ' + error.message, 'error'); return; }
+      showToast('Pseudo effacé.', 'success');
+      loadUsers();
+    };
+  });
+}
+
+document.getElementById('users-search').addEventListener('input', renderUsers);
 
 init();
 </script>
