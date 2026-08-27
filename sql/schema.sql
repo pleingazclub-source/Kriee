@@ -56,6 +56,9 @@ create table public.lots (
   ends_at timestamptz not null,
   cover_image_url text,
   images text[] default '{}',
+  -- Caractéristiques détaillées par onglet (Général / Moteur & électricité / Navigation / Gréement / Documents).
+  -- Structure libre : { "general": {"Marque":"...", ...}, "moteur": {...}, "navigation": {...}, "greement": {...}, "documents": ["nom du doc", ...] }
+  specs jsonb default '{}'::jsonb,
   created_at timestamptz default now()
 );
 
