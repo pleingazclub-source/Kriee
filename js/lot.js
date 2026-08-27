@@ -32,6 +32,8 @@ const DEMO_LOT = {
 
 let currentLot = null;
 
+let channelSubscribed = false;
+
 async function loadLot() {
   const isConfigured = !SUPABASE_URL.includes('TON-PROJET');
 
@@ -64,10 +66,16 @@ async function loadLot() {
   };
   renderLot();
 
-  supabaseClient.channel(`lot:${lotId}`)
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'bids', filter: `lot_id=eq.${lotId}` }, loadLot)
-    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'lots', filter: `id=eq.${lotId}` }, loadLot)
-    .subscribe();
+  // L'abonnement temps réel ne doit être créé qu'une seule fois : loadLot() est elle-même
+  // le callback rappelé à chaque événement, donc recréer le canal ici provoquerait une
+  // tentative de réabonnement sur un canal déjà actif — et une erreur "after subscribe()".
+  if (!channelSubscribed) {
+    channelSubscribed = true;
+    supabaseClient.channel(`lot:${lotId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'bids', filter: `lot_id=eq.${lotId}` }, loadLot)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'lots', filter: `id=eq.${lotId}` }, loadLot)
+      .subscribe();
+  }
 }
 
 function renderLot() {
