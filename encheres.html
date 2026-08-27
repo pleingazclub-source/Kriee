@@ -10,16 +10,47 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap">
 <link rel="stylesheet" href="css/style.css">
 <style>
-  .region-row { display: flex; gap: 0.7rem; padding: 0 2rem 1rem; flex-wrap: wrap; align-items: center; }
-  .region-row select {
-    padding: 0.55rem 0.8rem; border: 1px solid #C9C2B2; border-radius: var(--radius);
+  .search-page {
+    display: flex; align-items: flex-start; gap: 2rem;
+    max-width: 1400px; margin: 0 auto; padding: 1.5rem 2rem 3rem;
+  }
+  .search-sidebar {
+    width: 250px; flex-shrink: 0; position: sticky; top: 1.5rem;
+    display: flex; flex-direction: column; gap: 1.6rem;
+  }
+  .search-sidebar__group label {
+    display: block; font-family: var(--font-data); font-size: 0.72rem;
+    text-transform: uppercase; letter-spacing: 0.05em; color: #5A6772; margin-bottom: 0.5rem;
+  }
+  .search-sidebar input[type="search"] {
+    width: 100%; padding: 0.65rem 0.8rem; border: 1px solid #C9C2B2; border-radius: var(--radius);
+    font-family: var(--font-body); font-size: 0.9rem;
+  }
+  .search-sidebar select {
+    width: 100%; padding: 0.6rem 0.7rem; border: 1px solid #C9C2B2; border-radius: var(--radius);
     font-family: var(--font-data); font-size: 0.8rem; background: var(--foam); color: var(--ink);
   }
-  #proximity-btn { display: inline-flex; align-items: center; gap: 0.4rem; }
-  #proximity-status { font-size: 0.78rem; color: #5A6772; }
-  .lot-card__distance {
-    font-family: var(--font-data); font-size: 0.7rem; color: var(--mistral);
-    display: block; margin-top: 0.2rem;
+  .filters--sidebar {
+    display: flex; flex-direction: column; gap: 0.5rem; padding: 0;
+  }
+  .filters--sidebar .chip { text-align: left; border-radius: var(--radius); }
+  #proximity-btn { width: 100%; justify-content: center; }
+  #proximity-status { font-size: 0.75rem; color: #5A6772; display: block; margin-top: 0.5rem; }
+  #reset-filters { background: none; border: none; color: var(--mistral); text-decoration: underline; font-size: 0.82rem; cursor: pointer; padding: 0; text-align: left; }
+
+  .search-main { flex: 1; min-width: 0; }
+  .search-main__toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.2rem; gap: 1rem; flex-wrap: wrap; }
+  .search-main__count { font-size: 0.85rem; color: #5A6772; }
+  #sort-select {
+    padding: 0.6rem 0.8rem; border: 1px solid #C9C2B2; border-radius: var(--radius);
+    font-family: var(--font-data); font-size: 0.8rem; background: var(--foam); color: var(--ink);
+  }
+
+  .lot-card__distance { font-family: var(--font-data); font-size: 0.7rem; color: var(--mistral); display: block; margin-top: 0.2rem; }
+
+  @media (max-width: 860px) {
+    .search-page { flex-direction: column; padding: 1.2rem; }
+    .search-sidebar { width: 100%; position: static; }
   }
 </style>
 </head>
@@ -51,38 +82,58 @@
   <h1 class="page-band__title">Enchères en cours</h1>
 </div>
 
-<div class="search-row">
-  <input type="search" id="search-input" placeholder="Rechercher un bateau, une marque, un port, une région...">
-  <select id="sort-select">
-    <option value="ending-soon">Clôture la plus proche</option>
-    <option value="price-asc">Prix croissant</option>
-    <option value="price-desc">Prix décroissant</option>
-    <option value="proximity">Proximité (active la géolocalisation)</option>
-  </select>
-</div>
+<div class="search-page">
+  <aside class="search-sidebar">
+    <div class="search-sidebar__group">
+      <label for="search-input">Recherche</label>
+      <input type="search" id="search-input" placeholder="Bateau, marque, port, région...">
+    </div>
 
-<div class="region-row">
-  <select id="region-select">
-    <option value="all">Toutes les régions</option>
-    <option value="PACA">PACA</option>
-    <option value="Occitanie">Occitanie</option>
-    <option value="Corse">Corse</option>
-  </select>
-  <button type="button" class="btn btn--ghost" id="proximity-btn">📍 Trier par proximité</button>
-  <span id="proximity-status"></span>
-</div>
+    <div class="search-sidebar__group">
+      <label>Univers</label>
+      <div class="filters filters--sidebar" role="group" aria-label="Filtrer par univers">
+        <button class="chip" data-filter="all" aria-pressed="true">Tous les univers</button>
+        <button class="chip" data-filter="voile">Voile</button>
+        <button class="chip" data-filter="moteur">Moteur</button>
+        <button class="chip" data-filter="semi-rigide">Semi-rigide</button>
+        <button class="chip" data-filter="equipement">Équipement</button>
+      </div>
+    </div>
 
-<div class="filters" role="group" aria-label="Filtrer par univers">
-  <button class="chip" data-filter="all" aria-pressed="true">Tous les univers</button>
-  <button class="chip" data-filter="voile">Voile</button>
-  <button class="chip" data-filter="moteur">Moteur</button>
-  <button class="chip" data-filter="semi-rigide">Semi-rigide</button>
-  <button class="chip" data-filter="equipement">Équipement</button>
-</div>
+    <div class="search-sidebar__group">
+      <label for="region-select">Région</label>
+      <select id="region-select">
+        <option value="all">Toutes les régions</option>
+        <option value="PACA">PACA</option>
+        <option value="Occitanie">Occitanie</option>
+        <option value="Corse">Corse</option>
+      </select>
+    </div>
 
-<main id="lots" class="lots-grid" aria-live="polite">
-  <!-- rempli en JS, avec squelette de démo si Supabase n'est pas encore configuré -->
-</main>
+    <div class="search-sidebar__group">
+      <button type="button" class="btn btn--ghost" id="proximity-btn">📍 Trier par proximité</button>
+      <span id="proximity-status"></span>
+    </div>
+
+    <button type="button" id="reset-filters">Réinitialiser les filtres</button>
+  </aside>
+
+  <main class="search-main">
+    <div class="search-main__toolbar">
+      <span class="search-main__count" id="results-count"></span>
+      <select id="sort-select">
+        <option value="ending-soon">Clôture la plus proche</option>
+        <option value="price-asc">Prix croissant</option>
+        <option value="price-desc">Prix décroissant</option>
+        <option value="proximity">Proximité (active la géolocalisation)</option>
+      </select>
+    </div>
+
+    <div id="lots" class="lots-grid" style="padding:0;" aria-live="polite">
+      <!-- rempli en JS, avec squelette de démo si Supabase n'est pas encore configuré -->
+    </div>
+  </main>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/supabase-client.js"></script>
