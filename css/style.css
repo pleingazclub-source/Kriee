@@ -252,6 +252,18 @@ a { color: inherit; }
 .fee-strip__label { font-size: 0.85rem; color: #AAB8C2; }
 
 /* ---------- Filtres ---------- */
+.search-row {
+  display: flex; gap: 0.7rem; padding: 1.4rem 2rem 0; flex-wrap: wrap;
+}
+.search-row input[type="search"] {
+  flex: 1; min-width: 220px; padding: 0.65rem 0.9rem;
+  border: 1px solid #C9C2B2; border-radius: var(--radius);
+  font-family: var(--font-body); font-size: 0.92rem;
+}
+.search-row select {
+  padding: 0.65rem 0.9rem; border: 1px solid #C9C2B2; border-radius: var(--radius);
+  font-family: var(--font-data); font-size: 0.82rem; background: var(--foam); color: var(--ink);
+}
 .filters {
   display: flex;
   gap: 0.6rem;
@@ -427,6 +439,37 @@ a { color: inherit; }
   height: fit-content;
   background: var(--foam);
 }
+
+/* ---------- Mise en scène des 3 dernières secondes ---------- */
+.bid-panel.closing-tick {
+  animation: closing-pulse 1s ease infinite;
+  border-color: var(--buoy);
+}
+@keyframes closing-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(199,64,31,0.55); }
+  50% { box-shadow: 0 0 0 14px rgba(199,64,31,0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bid-panel.closing-tick { animation: none; border-color: var(--buoy); }
+}
+
+.flash-overlay {
+  position: fixed; inset: 0; background: var(--foam);
+  opacity: 0; pointer-events: none; z-index: 9999;
+  transition: opacity 0.09s ease-out;
+}
+
+.adjuge-banner {
+  display: none;
+  position: absolute; inset: 0;
+  background: var(--ink); color: var(--foam);
+  border-radius: var(--radius);
+  flex-direction: column; align-items: center; justify-content: center; gap: 0.5rem;
+  text-align: center; padding: 1.5rem; z-index: 5;
+}
+.adjuge-banner__hammer { font-size: 2.4rem; }
+.adjuge-banner__text { font-family: var(--font-display); font-size: 1.8rem; font-weight: 600; color: var(--brass); }
+.adjuge-banner__sub { font-size: 0.78rem; color: #C9D3D9; font-style: italic; }
 .bid-panel__timer {
   font-family: var(--font-data);
   font-size: 1.8rem;
@@ -440,6 +483,7 @@ a { color: inherit; }
 .bid-panel__current { text-align: center; margin-bottom: 1.2rem; }
 .bid-panel__current-label { font-size: 0.78rem; color: #5A6772; text-transform: uppercase; letter-spacing: 0.05em; }
 .bid-panel__current-amount { font-family: var(--font-data); font-size: 2.2rem; font-weight: 600; }
+.bid-panel__reserve-note { font-size: 0.72rem; color: #5A6772; font-style: italic; margin-top: 0.2rem; }
 .bid-form { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
 .bid-form input {
   flex: 1;
