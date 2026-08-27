@@ -100,7 +100,7 @@ function renderLot() {
   const minBid = l.current_price + l.bid_increment;
   document.getElementById('bid-amount').min = minBid;
   document.getElementById('bid-amount').value = minBid;
-  document.getElementById('bid-min-hint').textContent = `Plafond minimum : ${formatEUR(minBid)}`;
+  document.getElementById('bid-min-hint').textContent = `Minimum : ${formatEUR(minBid)}`;
 
   document.getElementById('one-boat-note').style.display = l.category_slug !== 'equipement' ? 'block' : 'none';
 
@@ -110,7 +110,10 @@ function renderLot() {
 
   supabaseClient.auth.getSession().then(({ data: { session } }) => {
     if (!session) return;
-    if (!checkOwnLot(session.user.id)) checkProfileComplete(session.user.id);
+    if (!checkOwnLot(session.user.id)) {
+      const leading = checkLeadingStatus(session.user.id);
+      if (!leading) checkProfileComplete(session.user.id);
+    }
   });
 }
 
@@ -192,8 +195,9 @@ function renderSpecPanelContent(key, value) {
 
 function renderBreakdown(amount) {
   const b = computeBuyerPrice(amount);
+  const isAuto = document.getElementById('bid-mode-auto')?.checked;
   document.getElementById('price-breakdown').innerHTML = `
-    <div class="price-breakdown__row"><span>Ton plafond</span><span>${formatEUR(b.hammerPrice)}</span></div>
+    <div class="price-breakdown__row"><span>${isAuto ? 'Ton plafond' : 'Ta mise'}</span><span>${formatEUR(b.hammerPrice)}</span></div>
     <div class="price-breakdown__row"><span>Frais de vente (18%)</span><span>${formatEUR(b.feeHT)}</span></div>
     <div class="price-breakdown__row"><span>TVA sur les frais (21%)</span><span>${formatEUR(b.feeVAT)}</span></div>
     <div class="price-breakdown__row price-breakdown__row--total"><span>Total maximum si tu gagnes</span><span>${formatEUR(b.total)}</span></div>
@@ -214,6 +218,17 @@ document.getElementById('bid-amount').addEventListener('input', (e) => {
   const val = Number(e.target.value) || 0;
   renderBreakdown(val);
 });
+
+function updateBidModeUI() {
+  const isAuto = document.getElementById('bid-mode-auto').checked;
+  document.getElementById('bid-amount').setAttribute('aria-label', isAuto ? 'Ton plafond maximum' : 'Montant de ton enchère');
+  document.getElementById('bid-mode-hint').textContent = isAuto
+    ? "C'est ton plafond maximum, jamais visible des autres — on enchérit pour toi automatiquement, par palier, jusqu'à ce montant. Le prix affiché ne monte que si un autre acheteur te dépasse réellement."
+    : 'Ton enchère devient immédiatement le prix affiché, visible de tous.';
+  renderBreakdown(Number(document.getElementById('bid-amount').value) || 0);
+}
+document.getElementById('bid-mode-normal').addEventListener('change', updateBidModeUI);
+document.getElementById('bid-mode-auto').addEventListener('change', updateBidModeUI);
 
 document.getElementById('bid-form').addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -247,12 +262,15 @@ document.getElementById('bid-form').addEventListener('submit', async (e) => {
     return;
   }
 
-  const { error } = await supabaseClient.rpc('place_bid', { p_lot_id: lotId, p_max_amount: amount, p_commitment: commitment });
+  const isAuto = document.getElementById('bid-mode-auto').checked;
+  const { error } = await supabaseClient.rpc('place_bid', { p_lot_id: lotId, p_amount: amount, p_commitment: commitment, p_is_auto: isAuto });
   if (error) {
     feedback.textContent = error.message;
     feedback.style.color = 'var(--buoy)';
   } else {
-    feedback.textContent = 'Plafond enregistré — on enchérit pour toi automatiquement si besoin.';
+    feedback.textContent = isAuto
+      ? 'Plafond enregistré — on enchérit pour toi automatiquement si besoin.'
+      : 'Enchère enregistrée.';
     feedback.style.color = 'var(--mistral)';
     document.getElementById('bid-commitment').checked = false;
   }
@@ -370,6 +388,22 @@ function checkOwnLot(userId) {
   document.getElementById('bid-form-wrap').style.display = 'none';
   document.getElementById('own-lot-note').style.display = 'block';
   return true;
+}
+
+// Tant que l'utilisateur est en tête, son plafond s'affiche en clair à la place du formulaire —
+// dès qu'il est dépassé, le formulaire (champ + case d'engagement) réapparaît automatiquement.
+function checkLeadingStatus(userId) {
+  const isLeading = currentLot && currentLot.leading_bidder_id === userId;
+  document.getElementById('bid-form-wrap').style.display = isLeading ? 'none' : 'block';
+  const note = document.getElementById('own-ceiling-note');
+  note.style.display = isLeading ? 'block' : 'none';
+  if (isLeading) {
+    const hasHiddenCeiling = currentLot.leading_max_amount > currentLot.current_price;
+    note.innerHTML = hasHiddenCeiling
+      ? `✓ Tu es en tête. <strong>Ton plafond automatique : ${formatEUR(currentLot.leading_max_amount)}</strong><br><span style="font-size:0.78rem; font-weight:400; color:#1D6B3E;">On enchérit pour toi si quelqu'un te dépasse, jusqu'à ce montant.</span>`
+      : `✓ Tu es en tête à <strong>${formatEUR(currentLot.current_price)}</strong>.`;
+  }
+  return isLeading;
 }
 
 async function checkProfileComplete(userId) {
