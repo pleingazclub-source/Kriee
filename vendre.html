@@ -117,6 +117,18 @@
           <input type="number" id="increment" required min="1" value="100">
         </div>
       </div>
+
+      <div class="field">
+        <label for="duration">Durée de l'enchère</label>
+        <select id="duration" required>
+          <option value="3">3 jours</option>
+          <option value="5">5 jours</option>
+          <option value="7">7 jours</option>
+          <option value="10">10 jours</option>
+          <option value="14">14 jours</option>
+        </select>
+        <p class="hint" id="duration-hint" style="margin:0.4rem 0 0;"></p>
+      </div>
     </section>
 
     <!-- ÉTAPE 2A : caractéristiques BATEAU (masquée si équipement) -->
@@ -342,13 +354,34 @@ document.getElementById('wizard-next').addEventListener('click', () => {
 document.getElementById('wizard-prev').addEventListener('click', () => {
   if (stepIndex > 0) { stepIndex--; showStep(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
 });
-document.getElementById('category').addEventListener('change', () => { stepIndex = 0; showStep(); syncRequiredFields(); });
+document.getElementById('category').addEventListener('change', () => { stepIndex = 0; showStep(); syncRequiredFields(); syncDurationDefault(); });
 
 function syncRequiredFields() {
   const isEquip = document.getElementById('category').value === 'equipement';
   document.getElementById('e-type').required = isEquip;
 }
 syncRequiredFields();
+
+// La durée par défaut diffère selon le type de bien : un bateau demande une visite,
+// un temps de réflexion — un délai plus long sert le vendeur. Un article d'accastillage
+// se décide vite — un délai court crée de l'urgence, sans empêcher de choisir autre chose.
+let durationTouchedByUser = false;
+document.getElementById('duration').addEventListener('change', () => { durationTouchedByUser = true; updateDurationHint(); });
+
+function syncDurationDefault() {
+  if (durationTouchedByUser) { updateDurationHint(); return; }
+  const isEquip = document.getElementById('category').value === 'equipement';
+  document.getElementById('duration').value = isEquip ? '5' : '10';
+  updateDurationHint();
+}
+
+function updateDurationHint() {
+  const isEquip = document.getElementById('category').value === 'equipement';
+  document.getElementById('duration-hint').textContent = isEquip
+    ? 'Un délai court crée de l\'urgence sur ce type d\'achat, rapide à décider.'
+    : 'Un bateau demande souvent une visite avant d\'enchérir — un délai plus long augmente tes chances de vente.';
+}
+syncDurationDefault();
 
 showStep();
 
@@ -430,6 +463,8 @@ document.getElementById('new-lot-btn').addEventListener('click', () => {
   document.getElementById('video-preview').innerHTML = '';
   stepIndex = 0;
   syncRequiredFields();
+  durationTouchedByUser = false;
+  syncDurationDefault();
   showStep();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 });
@@ -612,7 +647,7 @@ document.getElementById('sell-form').addEventListener('submit', async (e) => {
     specs,
     status: 'draft',
     starts_at: new Date().toISOString(),
-    ends_at: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7).toISOString(),
+    ends_at: new Date(Date.now() + 1000 * 60 * 60 * 24 * Number(document.getElementById('duration').value)).toISOString(),
   });
 
   if (error) {
