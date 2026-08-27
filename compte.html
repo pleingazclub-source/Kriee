@@ -482,7 +482,8 @@ function wireSaleActions() {
 
   document.querySelectorAll('button[data-sale-action]').forEach(btn => {
     btn.onclick = async () => {
-      const { action, saleId } = btn.dataset;
+      const action = btn.dataset.saleAction;
+      const saleId = btn.dataset.saleId;
       btn.disabled = true;
       let error;
       if (action === 'accept') ({ error } = await supabaseClient.rpc('seller_respond_to_sale', { p_sale_id: saleId, p_accept: true }));
