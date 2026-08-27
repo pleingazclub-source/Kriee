@@ -3,19 +3,20 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Vendre un bateau — Kriee</title>
+<title>Vendre un bateau ou du matériel — Kriee</title>
 <link rel="stylesheet" href="css/style.css">
 <style>
-  .sell-form { max-width: 560px; margin: 0 auto; padding: 3rem 2rem; }
-  .sell-form h1 { font-family: var(--font-display); font-size: 1.8rem; }
+  .sell-wrap { max-width: 720px; margin: 0 auto; padding: 2.5rem 2rem 4rem; }
+  .sell-wrap h1 { font-family: var(--font-display); font-size: 1.8rem; margin-bottom: 0.2rem; }
+  .sell-wrap > p.lead { color: #5A6772; font-size: 0.92rem; margin-bottom: 1.6rem; }
   .field { margin-bottom: 1.1rem; }
   .field label { display: block; font-size: 0.85rem; margin-bottom: 0.35rem; color: #5A6772; }
   .field input, .field select, .field textarea {
     width: 100%; padding: 0.65rem; border: 1px solid #C9C2B2; border-radius: 3px; font-family: var(--font-body); font-size: 0.95rem;
   }
-  .field textarea { min-height: 100px; }
-  .field-row { display: flex; gap: 1rem; }
-  .field-row .field { flex: 1; }
+  .field textarea { min-height: 90px; }
+  .field-row { display: flex; gap: 1rem; flex-wrap: wrap; }
+  .field-row .field { flex: 1; min-width: 160px; }
 </style>
 </head>
 <body>
@@ -27,66 +28,215 @@
   <nav class="site-nav">
     <a href="index.html">Enchères en cours</a>
     <a href="vendre.html">Vendre un bateau</a>
+    <a href="#" class="btn btn--ghost" id="nav-login">Se connecter</a>
   </nav>
 </header>
 
-<main class="sell-form">
+<main class="sell-wrap">
   <h1>Mettre un lot en vente</h1>
-  <p style="color:#5A6772; font-size:0.92rem;">0% de frais vendeur — vous êtes payé au prix marteau. Le lot passe en modération avant sa mise en ligne.</p>
+  <p class="lead">0% de frais vendeur — vous êtes payé au prix marteau. Le lot passe en modération avant sa mise en ligne.</p>
+
+  <div class="spec-tabs" role="tablist" id="wizard-tabs"></div>
 
   <form id="sell-form">
-    <div class="field">
-      <label for="title">Titre du lot</label>
-      <input type="text" id="title" required placeholder="Ex. Voilier Bénéteau First 30 — 1998">
-    </div>
 
-    <div class="field-row">
+    <!-- ÉTAPE 1 : type de lot + infos de base -->
+    <section class="spec-panel active" data-step="1">
       <div class="field">
-        <label for="category">Catégorie</label>
+        <label for="category">Que voulez-vous vendre ?</label>
         <select id="category" required>
-          <option value="voile">Voile</option>
-          <option value="moteur">Moteur</option>
+          <option value="voile">Voilier</option>
+          <option value="moteur">Bateau à moteur</option>
           <option value="semi-rigide">Semi-rigide</option>
-          <option value="equipement">Équipement & accastillage</option>
+          <option value="equipement">Équipement / accastillage (pas un bateau entier)</option>
         </select>
       </div>
-      <div class="field">
-        <label for="region">Région</label>
-        <select id="region" required>
-          <option>PACA</option>
-          <option>Occitanie</option>
-          <option>Corse</option>
-        </select>
-      </div>
-    </div>
 
-    <div class="field">
-      <label for="port">Port / lieu de visite</label>
-      <input type="text" id="port" placeholder="Ex. Saint-Mandrier-sur-Mer">
-    </div>
-
-    <div class="field">
-      <label for="description">Description</label>
-      <textarea id="description" required></textarea>
-    </div>
-
-    <div class="field-row">
       <div class="field">
-        <label for="starting">Prix de départ (€)</label>
-        <input type="number" id="starting" required min="1">
+        <label for="title">Titre du lot</label>
+        <input type="text" id="title" required placeholder="Ex. Voilier Bénéteau First 30 — 1998">
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label for="region">Région</label>
+          <select id="region" required>
+            <option>PACA</option>
+            <option>Occitanie</option>
+            <option>Corse</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="port">Port / lieu de visite</label>
+          <input type="text" id="port" placeholder="Ex. Saint-Mandrier-sur-Mer">
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label for="starting">Prix de départ (€)</label>
+          <input type="number" id="starting" required min="1">
+        </div>
+        <div class="field">
+          <label for="reserve">Prix de réserve (€, confidentiel)</label>
+          <input type="number" id="reserve" required min="1">
+        </div>
+        <div class="field">
+          <label for="increment">Palier d'enchère (€)</label>
+          <input type="number" id="increment" required min="1" value="100">
+        </div>
+      </div>
+    </section>
+
+    <!-- ÉTAPE 2A : caractéristiques BATEAU (masquée si équipement) -->
+    <section class="spec-panel" data-step="2-boat">
+      <p class="section-title">Caractéristiques du bateau</p>
+      <p class="hint">Si tu ne sais pas, laisse vide — rien n'est obligatoire ici.</p>
+      <div class="field-row">
+        <div class="field"><label for="b-marque">Marque</label><input type="text" id="b-marque"></div>
+        <div class="field"><label for="b-modele">Modèle / Type</label><input type="text" id="b-modele"></div>
+        <div class="field"><label for="b-annee">Année de construction</label><input type="number" id="b-annee"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label for="b-longueur">Longueur (m)</label><input type="number" step="0.1" id="b-longueur"></div>
+        <div class="field"><label for="b-largeur">Largeur (m)</label><input type="number" step="0.1" id="b-largeur"></div>
+        <div class="field"><label for="b-tirant">Tirant d'eau (m)</label><input type="number" step="0.1" id="b-tirant"></div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="b-materiau">Matériau de la coque</label>
+          <select id="b-materiau">
+            <option value=""></option>
+            <option>Polyester</option><option>Aluminium</option><option>Bois</option><option>Acier</option><option>PVC / Hypalon (semi-rigide)</option>
+          </select>
+        </div>
+        <div class="field"><label for="b-couchages">Nombre de couchettes</label><input type="number" id="b-couchages"></div>
+        <div class="field">
+          <label for="b-immat">Immatriculation</label>
+          <select id="b-immat"><option value=""></option><option>Oui</option><option>Non</option></select>
+        </div>
+      </div>
+    </section>
+
+    <!-- ÉTAPE 2B : caractéristiques ÉQUIPEMENT (masquée si bateau) -->
+    <section class="spec-panel" data-step="2-equip">
+      <p class="section-title">Caractéristiques de l'équipement</p>
+      <div class="field-row">
+        <div class="field"><label for="e-type">Type d'équipement</label>
+          <select id="e-type">
+            <option value=""></option>
+            <option>Voile / gréement</option><option>Moteur</option><option>Électronique / navigation</option>
+            <option>Sécurité</option><option>Accastillage divers</option><option>Remorque</option><option>Autre</option>
+          </select>
+        </div>
+        <div class="field"><label for="e-marque">Marque</label><input type="text" id="e-marque"></div>
+        <div class="field"><label for="e-modele">Modèle</label><input type="text" id="e-modele"></div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="e-etat">État</label>
+          <select id="e-etat">
+            <option value=""></option>
+            <option>Neuf</option><option>Très bon état</option><option>Bon état</option><option>État moyen</option><option>Pour pièces</option>
+          </select>
+        </div>
+        <div class="field"><label for="e-annee">Année d'achat</label><input type="number" id="e-annee"></div>
+        <div class="field"><label for="e-poids">Poids (kg, si pertinent)</label><input type="number" id="e-poids"></div>
       </div>
       <div class="field">
-        <label for="reserve">Prix de réserve (€, confidentiel)</label>
-        <input type="number" id="reserve" required min="1">
+        <label for="e-compat">Compatibilité (facultatif)</label>
+        <input type="text" id="e-compat" placeholder="Ex. Compatible voiliers 30-35 pieds, winch Harken taille 40...">
+      </div>
+    </section>
+
+    <!-- ÉTAPE 3 : équipements à bord (bateaux uniquement) -->
+    <section class="spec-panel" data-step="3-boat">
+      <p class="section-title">Moteur & électricité</p>
+      <div class="field-row">
+        <div class="field">
+          <label for="m-type">Type de moteur</label>
+          <select id="m-type"><option value=""></option><option>Hors-bord</option><option>Inboard</option><option>Aucun (voile pure)</option></select>
+        </div>
+        <div class="field"><label for="m-marque">Marque moteur</label><input type="text" id="m-marque"></div>
+        <div class="field"><label for="m-puissance">Puissance (ch)</label><input type="number" id="m-puissance"></div>
+        <div class="field"><label for="m-heures">Heures moteur</label><input type="number" id="m-heures"></div>
+      </div>
+
+      <p class="section-title">Navigation & électronique présentes à bord</p>
+      <div class="check-grid" id="nav-checks">
+        <label><input type="checkbox" value="GPS"> GPS</label>
+        <label><input type="checkbox" value="VHF"> VHF</label>
+        <label><input type="checkbox" value="Pilote automatique"> Pilote automatique</label>
+        <label><input type="checkbox" value="Compas"> Compas</label>
+        <label><input type="checkbox" value="Sondeur"> Sondeur</label>
+        <label><input type="checkbox" value="Loch/speedomètre"> Loch/speedomètre</label>
+        <label><input type="checkbox" value="AIS"> AIS</label>
+        <label><input type="checkbox" value="Radar"> Radar</label>
+        <label><input type="checkbox" value="Traceur de cartes"> Traceur de cartes</label>
+      </div>
+
+      <p class="section-title">Gréement (voiliers)</p>
+      <div class="field-row">
+        <div class="field"><label for="g-mats">Nombre de mâts</label><input type="number" id="g-mats"></div>
+        <div class="field">
+          <label for="g-etat">État des voiles</label>
+          <select id="g-etat"><option value=""></option><option>Neuves</option><option>Bon</option><option>Moyen</option><option>À changer</option></select>
+        </div>
+      </div>
+      <div class="check-grid" id="greement-checks">
+        <label><input type="checkbox" value="Grand-voile"> Grand-voile</label>
+        <label><input type="checkbox" value="Génois"> Génois</label>
+        <label><input type="checkbox" value="Foc"> Foc</label>
+        <label><input type="checkbox" value="Spi"> Spi</label>
+        <label><input type="checkbox" value="Gennaker"> Gennaker</label>
+        <label><input type="checkbox" value="Foc d'orage"> Foc d'orage</label>
+      </div>
+
+      <p class="section-title">Sécurité & équipement extérieur</p>
+      <div class="check-grid" id="securite-checks">
+        <label><input type="checkbox" value="Bouée de sauvetage"> Bouée de sauvetage</label>
+        <label><input type="checkbox" value="Radeau de survie"> Radeau de survie</label>
+        <label><input type="checkbox" value="Cockpit autovideur"> Cockpit autovideur</label>
+        <label><input type="checkbox" value="Pompe de cale"> Pompe de cale</label>
+        <label><input type="checkbox" value="Bimini"> Bimini</label>
+        <label><input type="checkbox" value="Taud"> Taud</label>
+        <label><input type="checkbox" value="Défenses et cordages"> Défenses et cordages</label>
+        <label><input type="checkbox" value="Annexe"> Annexe</label>
+      </div>
+    </section>
+
+    <!-- ÉTAPE 4 : description, documents, photo -->
+    <section class="spec-panel" data-step="4">
+      <p class="section-title">Description & documents</p>
+      <div class="field">
+        <label for="description">Description</label>
+        <textarea id="description" required placeholder="État général, historique, ce qui est inclus dans la vente..."></textarea>
       </div>
       <div class="field">
-        <label for="increment">Palier d'enchère (€)</label>
-        <input type="number" id="increment" required min="1" value="100">
+        <label for="documents">Documents disponibles (un par ligne, facultatif)</label>
+        <textarea id="documents" placeholder="Acte de francisation&#10;Dernier rapport de visite technique"></textarea>
       </div>
-    </div>
+      <div class="field">
+        <label for="cover-image">Lien vers une photo de couverture (facultatif pour l'instant)</label>
+        <input type="url" id="cover-image" placeholder="https://...">
+      </div>
+    </section>
 
-    <button type="submit" class="btn btn--primary" style="width:100%; padding:0.85rem;">Soumettre le lot pour modération</button>
-    <p id="sell-feedback" style="font-size:0.85rem; margin-top:0.8rem;" role="status"></p>
+    <!-- ÉTAPE 5 : récapitulatif -->
+    <section class="spec-panel" data-step="5">
+      <p class="section-title">Dernière vérification</p>
+      <p class="hint">Relis les infos saisies dans les étapes précédentes avant d'envoyer. Le lot sera visible par l'équipe de modération, pas encore publiquement.</p>
+      <div class="field">
+        <label><input type="checkbox" id="confirm-honest" style="width:auto; display:inline-block; margin-right:0.5rem;" required>Je certifie que les informations fournies sont exactes.</label>
+      </div>
+      <button type="submit" class="btn btn--primary" style="width:100%; padding:0.85rem;">Soumettre le lot pour modération</button>
+      <p id="sell-feedback" style="font-size:0.85rem; margin-top:0.8rem;" role="status"></p>
+    </section>
+
+    <div class="wizard-nav">
+      <button type="button" class="btn btn--ghost" id="wizard-prev">Précédent</button>
+      <button type="button" class="btn btn--primary" id="wizard-next">Suivant</button>
+    </div>
   </form>
 </main>
 
@@ -94,6 +244,66 @@
 <script src="js/supabase-client.js"></script>
 <script src="js/auth.js"></script>
 <script>
+// ---------- Assistant multi-étapes, avec branche bateau / équipement ----------
+function currentSteps() {
+  const isEquip = document.getElementById('category').value === 'equipement';
+  return isEquip ? ['1', '2-equip', '4', '5'] : ['1', '2-boat', '3-boat', '4', '5'];
+}
+const STEP_LABELS = {
+  '1': 'Infos de base',
+  '2-boat': 'Caractéristiques',
+  '2-equip': 'Caractéristiques',
+  '3-boat': 'Équipements à bord',
+  '4': 'Description & docs',
+  '5': 'Récapitulatif',
+};
+
+let stepIndex = 0;
+
+function renderTabs() {
+  const steps = currentSteps();
+  const tabs = document.getElementById('wizard-tabs');
+  tabs.innerHTML = steps.map((s, i) => `<button type="button" class="spec-tab" data-goto="${i}" aria-selected="${i === stepIndex}">${i + 1}. ${STEP_LABELS[s]}</button>`).join('');
+  tabs.querySelectorAll('.spec-tab').forEach(t => t.addEventListener('click', () => goToStep(Number(t.dataset.goto))));
+}
+
+function showStep() {
+  const steps = currentSteps();
+  if (stepIndex >= steps.length) stepIndex = steps.length - 1;
+  document.querySelectorAll('.spec-panel[data-step]').forEach(p => p.classList.remove('active'));
+  const target = document.querySelector(`.spec-panel[data-step="${steps[stepIndex]}"]`);
+  if (target) target.classList.add('active');
+  renderTabs();
+  document.getElementById('wizard-prev').style.visibility = stepIndex === 0 ? 'hidden' : 'visible';
+  document.getElementById('wizard-next').style.display = stepIndex === steps.length - 1 ? 'none' : 'inline-block';
+}
+
+function goToStep(i) { stepIndex = i; showStep(); }
+
+document.getElementById('wizard-next').addEventListener('click', () => {
+  const steps = currentSteps();
+  if (stepIndex < steps.length - 1) { stepIndex++; showStep(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+});
+document.getElementById('wizard-prev').addEventListener('click', () => {
+  if (stepIndex > 0) { stepIndex--; showStep(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+});
+document.getElementById('category').addEventListener('change', () => { stepIndex = 0; showStep(); });
+
+showStep();
+
+// ---------- Soumission ----------
+function checkedValues(containerId) {
+  return Array.from(document.querySelectorAll(`#${containerId} input:checked`)).map(el => el.value);
+}
+function checksToObject(containerId) {
+  const out = {};
+  checkedValues(containerId).forEach(v => out[v] = '✓');
+  return out;
+}
+function parseLines(text) {
+  return text.split('\n').map(l => l.trim()).filter(Boolean);
+}
+
 document.getElementById('sell-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const feedback = document.getElementById('sell-feedback');
@@ -112,7 +322,63 @@ document.getElementById('sell-form').addEventListener('submit', async (e) => {
     return;
   }
 
-  const { data: cat } = await supabaseClient.from('categories').select('id').eq('slug', document.getElementById('category').value).single();
+  const categorySlug = document.getElementById('category').value;
+  const isEquip = categorySlug === 'equipement';
+
+  const { data: cat } = await supabaseClient.from('categories').select('id').eq('slug', categorySlug).single();
+
+  let generalSpecs = {};
+  if (isEquip) {
+    generalSpecs = {
+      "Type d'équipement": document.getElementById('e-type').value,
+      "Marque": document.getElementById('e-marque').value,
+      "Modèle": document.getElementById('e-modele').value,
+      "État": document.getElementById('e-etat').value,
+      "Année d'achat": document.getElementById('e-annee').value,
+      "Poids (kg)": document.getElementById('e-poids').value,
+      "Compatibilité": document.getElementById('e-compat').value,
+    };
+  } else {
+    generalSpecs = {
+      "Marque": document.getElementById('b-marque').value,
+      "Modèle / Type": document.getElementById('b-modele').value,
+      "Année de construction": document.getElementById('b-annee').value,
+      "Longueur (m)": document.getElementById('b-longueur').value,
+      "Largeur (m)": document.getElementById('b-largeur').value,
+      "Tirant d'eau (m)": document.getElementById('b-tirant').value,
+      "Matériau": document.getElementById('b-materiau').value,
+      "Nombre de couchettes": document.getElementById('b-couchages').value,
+      "Immatriculation": document.getElementById('b-immat').value,
+    };
+  }
+  // Retire les champs vides pour ne pas polluer l'affichage en onglets
+  Object.keys(generalSpecs).forEach(k => { if (!generalSpecs[k]) delete generalSpecs[k]; });
+
+  const specs = {
+    general: generalSpecs,
+    documents: parseLines(document.getElementById('documents').value),
+  };
+
+  if (!isEquip) {
+    const moteurSpecs = {
+      "Type de moteur": document.getElementById('m-type').value,
+      "Marque moteur": document.getElementById('m-marque').value,
+      "Puissance (ch)": document.getElementById('m-puissance').value,
+      "Heures moteur": document.getElementById('m-heures').value,
+    };
+    Object.keys(moteurSpecs).forEach(k => { if (!moteurSpecs[k]) delete moteurSpecs[k]; });
+    specs.moteur = moteurSpecs;
+    specs.navigation = checksToObject('nav-checks');
+
+    const greementSpecs = checksToObject('greement-checks');
+    const gMats = document.getElementById('g-mats').value;
+    const gEtat = document.getElementById('g-etat').value;
+    if (gMats) greementSpecs['Nombre de mâts'] = gMats;
+    if (gEtat) greementSpecs['État des voiles'] = gEtat;
+    specs.greement = greementSpecs;
+
+    specs.securite = checksToObject('securite-checks');
+  }
 
   const { error } = await supabaseClient.from('lots').insert({
     seller_id: session.user.id,
@@ -125,6 +391,8 @@ document.getElementById('sell-form').addEventListener('submit', async (e) => {
     current_price: Number(document.getElementById('starting').value),
     reserve_price: Number(document.getElementById('reserve').value),
     bid_increment: Number(document.getElementById('increment').value),
+    cover_image_url: document.getElementById('cover-image').value || null,
+    specs,
     status: 'draft',
     starts_at: new Date().toISOString(),
     ends_at: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7).toISOString(),
@@ -137,6 +405,8 @@ document.getElementById('sell-form').addEventListener('submit', async (e) => {
     feedback.textContent = 'Lot soumis. Il passera en ligne après modération.';
     feedback.style.color = 'var(--mistral)';
     e.target.reset();
+    stepIndex = 0;
+    showStep();
   }
 });
 </script>
