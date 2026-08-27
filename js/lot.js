@@ -74,6 +74,7 @@ function renderLot() {
   const l = currentLot;
   document.getElementById('page-title').textContent = `${l.title} — Kriee`;
   document.getElementById('view-count').textContent = `👁 ${l.view_count ?? 0}`;
+  document.getElementById('favorite-count').textContent = `♥ ${l.favorite_count ?? 0}`;
   renderGallery(l);
   document.getElementById('lot-title').textContent = l.title;
   document.getElementById('lot-region').textContent = l.region;
@@ -376,12 +377,17 @@ document.getElementById('favorite-btn').addEventListener('click', async () => {
   const { data: { session } } = await supabaseClient.auth.getSession();
   if (!session) { location.href = 'connexion.html'; return; }
 
+  const countEl = document.getElementById('favorite-count');
+  const currentCount = parseInt(countEl.textContent.replace('♥', '').trim(), 10) || 0;
+
   if (isFavorited) {
     await supabaseClient.from('favorites').delete().eq('user_id', session.user.id).eq('lot_id', lotId);
     isFavorited = false;
+    countEl.textContent = `♥ ${Math.max(currentCount - 1, 0)}`; // mise à jour immédiate, en attendant la confirmation temps réel
   } else {
     await supabaseClient.from('favorites').insert({ user_id: session.user.id, lot_id: lotId });
     isFavorited = true;
+    countEl.textContent = `♥ ${currentCount + 1}`;
   }
   updateFavoriteUI();
 });
