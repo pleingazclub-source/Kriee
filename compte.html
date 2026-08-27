@@ -241,12 +241,6 @@
   </section>
 
   <section class="account-section">
-    <h2>Mes ventes à finaliser</h2>
-    <div id="my-sales-list"></div>
-    <p class="empty-state" id="my-sales-empty" style="display:none;">Aucune vente à finaliser pour l'instant.</p>
-  </section>
-
-  <section class="account-section">
     <h2>Mes achats à finaliser</h2>
     <div id="my-purchases-list"></div>
     <p class="empty-state" id="my-purchases-empty" style="display:none;">Aucun achat à finaliser pour l'instant.</p>
@@ -271,7 +265,6 @@ async function init() {
   loadMyFavorites(session.user.id);
   loadMyBids(session.user.id);
   loadMyLots(session.user.id);
-  loadMySales(session.user.id);
   loadMyPurchases(session.user.id);
 }
 
@@ -313,13 +306,40 @@ async function loadMyLots(userId) {
     .eq('seller_id', userId)
     .order('created_at', { ascending: false });
 
+  const { data: salesData } = await supabaseClient
+    .from('sales')
+    .select('*')
+    .eq('seller_id', userId);
+  const salesByLot = {};
+  (salesData || []).forEach(s => { salesByLot[s.lot_id] = s; });
+
   const rows = document.getElementById('my-lots-rows');
   if (error || !data || data.length === 0) {
     document.getElementById('my-lots-empty').style.display = 'block';
     return;
   }
 
-  rows.innerHTML = data.map(l => `
+  rows.innerHTML = data.map(l => {
+    const sale = salesByLot[l.id];
+    let saleActionHTML = '';
+    if (sale && sale.status !== 'cancelled') {
+      if (sale.status === 'confirmed') {
+        saleActionHTML = `<button type="button" class="btn btn--ghost btn--sm" data-sale-reveal="${sale.id}" style="margin-top:0.4rem; display:block;">Voir les coordonnées</button>`;
+      } else if (sale.seller_accepted === null || sale.seller_accepted === undefined) {
+        const reserveNote = l.current_price < l.reserve_price
+          ? `<div style="font-size:0.72rem; color:#5A6772; margin-top:0.3rem;">Réserve non atteinte (manque ${formatEUR(l.reserve_price - l.current_price)}) — tu peux accepter quand même ou refuser.</div>`
+          : '';
+        saleActionHTML = `
+          ${reserveNote}
+          <div style="margin-top:0.4rem; display:flex; gap:0.4rem;">
+            <button type="button" class="btn btn--primary btn--sm" data-sale-action="accept" data-sale-id="${sale.id}" style="padding:0.35rem 0.7rem; font-size:0.78rem;">Accepter</button>
+            <button type="button" class="btn--danger btn--sm" data-sale-action="reject" data-sale-id="${sale.id}" style="padding:0.35rem 0.7rem; font-size:0.78rem;">Refuser</button>
+          </div>`;
+      } else {
+        saleActionHTML = `<div style="font-size:0.78rem; color:#5A6772; margin-top:0.4rem;">En attente de l'acheteur.</div>`;
+      }
+    }
+    return `
     <tr>
       <td>${l.cover_image_url ? `<img src="${l.cover_image_url}">` : ''}</td>
       <td>
@@ -327,6 +347,8 @@ async function loadMyLots(userId) {
         ${l.moderation_note ? `<div class="moderation-note ${l.status === 'deleted' ? 'moderation-note--deleted' : ''}">
           <strong>${l.status === 'deleted' ? 'Motif de suppression' : 'Motif de refus'} :</strong> ${l.moderation_note}
         </div>` : ''}
+        ${saleActionHTML}
+        <div id="contact-${sale?.id}"></div>
       </td>
       <td>${formatEUR(l.starting_price)}</td>
       <td>${formatEUR(l.reserve_price)}</td>
@@ -337,7 +359,10 @@ async function loadMyLots(userId) {
         <a href="lot.html?id=${l.id}" class="btn btn--ghost btn--sm" style="padding:0.35rem 0.7rem; font-size:0.78rem; text-decoration:none;">Voir</a>
       </td>
     </tr>
-  `).join('');
+  `;
+  }).join('');
+
+  wireSaleActions();
 }
 
 async function loadMyBids(userId) {
@@ -380,25 +405,6 @@ async function loadMyBids(userId) {
     </tr>
   `;
   }).join('');
-}
-
-// ---------- Mes ventes (côté vendeur) ----------
-async function loadMySales(userId) {
-  const { data, error } = await supabaseClient
-    .from('sales')
-    .select('*, lots(title, cover_image_url, region)')
-    .eq('seller_id', userId)
-    .neq('status', 'cancelled')
-    .order('created_at', { ascending: false });
-
-  const list = document.getElementById('my-sales-list');
-  if (error || !data || data.length === 0) {
-    document.getElementById('my-sales-empty').style.display = 'block';
-    return;
-  }
-
-  list.innerHTML = data.map(s => saleCardHTML(s, 'seller')).join('');
-  wireSaleActions();
 }
 
 // ---------- Mes achats (côté acheteur) ----------
@@ -473,7 +479,7 @@ function wireSaleActions() {
       if (error) { alert('Erreur : ' + error.message); btn.disabled = false; return; }
 
       const { data: { session } } = await supabaseClient.auth.getSession();
-      loadMySales(session.user.id);
+      loadMyLots(session.user.id);
       loadMyPurchases(session.user.id);
     };
   });
