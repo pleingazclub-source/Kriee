@@ -8,6 +8,8 @@ async function initAuthNav() {
   function removeAdminLink() {
     const existing = document.getElementById('nav-admin-link');
     if (existing) existing.remove();
+    const existing2 = document.getElementById('nav-admin-link-2');
+    if (existing2) existing2.remove();
   }
 
   let renderGen = 0;
@@ -26,9 +28,16 @@ async function initAuthNav() {
       const { data: profile } = await supabaseClient.from('profiles').select('is_admin').eq('id', session.user.id).single();
       if (gen !== renderGen) return; // une exécution plus récente a pris le relais, on abandonne celle-ci
       removeAdminLink();
+
+      const accountLink = document.createElement('a');
+      accountLink.id = 'nav-admin-link'; // réutilise le même conteneur pour retirer/replacer facilement
+      accountLink.href = 'compte.html';
+      accountLink.textContent = 'Mon compte';
+      navLogin.parentNode.insertBefore(accountLink, navLogin);
+
       if (profile && profile.is_admin) {
         const link = document.createElement('a');
-        link.id = 'nav-admin-link';
+        link.id = 'nav-admin-link-2';
         link.href = 'admin.html';
         link.textContent = 'Modération';
         navLogin.parentNode.insertBefore(link, navLogin);
