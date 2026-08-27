@@ -154,6 +154,17 @@
     <tbody id="admin-rows"></tbody>
   </table>
   <p id="admin-empty" style="color:#5A6772; padding:1.5rem 0; display:none;">Aucun lot dans cette catégorie.</p>
+
+  <div class="divider" aria-hidden="true" style="margin: 2.5rem auto;"><span class="divider__mark"></span></div>
+
+  <p class="revenue-dash__title" style="color:var(--ink); margin-bottom:1rem;">Acheteurs signalés (désistements après vente acceptée)</p>
+  <table class="admin-table">
+    <thead>
+      <tr><th>Acheteur</th><th>Incidents</th><th>Statut</th><th>Actions</th></tr>
+    </thead>
+    <tbody id="flagged-buyers-rows"></tbody>
+  </table>
+  <p id="flagged-buyers-empty" style="color:#5A6772; padding:1rem 0; display:none;">Aucun acheteur signalé pour l'instant.</p>
 </main>
 
 <div class="modal-overlay" id="reject-modal">
@@ -205,6 +216,7 @@ async function init() {
 
   document.getElementById('admin-content').style.display = 'block';
   loadLots();
+  loadFlaggedBuyers();
 
   supabaseClient.channel('admin:lots')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'lots' }, loadLots)
@@ -388,6 +400,38 @@ document.querySelectorAll('.chip[data-reserve-filter]').forEach(chip => {
     render();
   });
 });
+
+async function loadFlaggedBuyers() {
+  const { data, error } = await supabaseClient
+    .from('profiles')
+    .select('id, full_name, buyer_strikes')
+    .gt('buyer_strikes', 0)
+    .order('buyer_strikes', { ascending: false });
+
+  const rows = document.getElementById('flagged-buyers-rows');
+  if (error || !data || data.length === 0) {
+    document.getElementById('flagged-buyers-empty').style.display = 'block';
+    return;
+  }
+
+  rows.innerHTML = data.map(p => `
+    <tr>
+      <td>${p.full_name || p.id}</td>
+      <td>${p.buyer_strikes}${p.buyer_strikes >= 3 ? ' — <span style="color:var(--buoy);">bloqué</span>' : ''}</td>
+      <td>${p.buyer_strikes >= 3 ? '<span class="status-pill status-pill--cancelled">Enchères bloquées</span>' : '<span class="status-pill status-pill--draft">Sous surveillance</span>'}</td>
+      <td><button type="button" class="btn btn--ghost btn--sm" data-reset-strikes="${p.id}">Réinitialiser</button></td>
+    </tr>
+  `).join('');
+
+  rows.querySelectorAll('button[data-reset-strikes]').forEach(btn => {
+    btn.onclick = async () => {
+      const { error } = await supabaseClient.from('profiles').update({ buyer_strikes: 0 }).eq('id', btn.dataset.resetStrikes);
+      if (error) { showToast('Erreur : ' + error.message, 'error'); return; }
+      showToast('Compteur réinitialisé — les enchères sont débloquées.', 'success');
+      loadFlaggedBuyers();
+    };
+  });
+}
 
 init();
 </script>
