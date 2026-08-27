@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Vendre un bateau ou du matériel — Kriee</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap">
 <link rel="stylesheet" href="css/style.css">
 <style>
   .sell-wrap { max-width: 720px; margin: 0 auto; padding: 2.5rem 2rem 4rem; }
@@ -22,7 +25,12 @@
 <body>
 
 <header class="site-header">
-  <a href="index.html" class="brand">Kri<span style="color:var(--buoy)">ee</span>
+  <a href="index.html" class="brand">
+    <svg class="brand__mark" width="24" height="26" viewBox="0 0 24 26" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <line x1="5" y1="1" x2="5" y2="25" stroke="#0E2233" stroke-width="2"/>
+      <path d="M5 3 L21 8.5 L5 14 Z" fill="#C7401F"/>
+    </svg>
+    <span class="brand__word">Kri<span style="color:var(--buoy)">ee</span></span>
     <span class="brand__sub">SUD DE LA FRANCE</span>
   </a>
   <nav class="site-nav">
@@ -37,6 +45,7 @@
   <p class="lead">0% de frais vendeur — vous êtes payé au prix marteau. Le lot passe en modération avant sa mise en ligne.</p>
 
   <div class="spec-tabs" role="tablist" id="wizard-tabs"></div>
+  <div class="wizard-progress"><div class="wizard-progress__bar" id="wizard-progress-bar"></div></div>
 
   <form id="sell-form">
 
@@ -263,7 +272,10 @@ let stepIndex = 0;
 function renderTabs() {
   const steps = currentSteps();
   const tabs = document.getElementById('wizard-tabs');
-  tabs.innerHTML = steps.map((s, i) => `<button type="button" class="spec-tab" data-goto="${i}" aria-selected="${i === stepIndex}">${i + 1}. ${STEP_LABELS[s]}</button>`).join('');
+  tabs.innerHTML = steps.map((s, i) => {
+    const done = i < stepIndex ? ' spec-tab--done' : '';
+    return `<button type="button" class="spec-tab${done}" data-goto="${i}" aria-selected="${i === stepIndex}">${i + 1}. ${STEP_LABELS[s]}</button>`;
+  }).join('');
   tabs.querySelectorAll('.spec-tab').forEach(t => t.addEventListener('click', () => goToStep(Number(t.dataset.goto))));
 }
 
@@ -274,6 +286,7 @@ function showStep() {
   const target = document.querySelector(`.spec-panel[data-step="${steps[stepIndex]}"]`);
   if (target) target.classList.add('active');
   renderTabs();
+  document.getElementById('wizard-progress-bar').style.width = `${((stepIndex + 1) / steps.length) * 100}%`;
   document.getElementById('wizard-prev').style.visibility = stepIndex === 0 ? 'hidden' : 'visible';
   document.getElementById('wizard-next').style.display = stepIndex === steps.length - 1 ? 'none' : 'inline-block';
 }
