@@ -10,7 +10,10 @@ async function initAuthNav() {
     if (existing) existing.remove();
   }
 
+  let renderGen = 0;
   async function render(session) {
+    const gen = ++renderGen;
+
     if (session) {
       navLogin.textContent = `Déconnexion (${session.user.email})`;
       navLogin.href = '#';
@@ -20,8 +23,9 @@ async function initAuthNav() {
         location.href = 'index.html';
       };
 
-      removeAdminLink();
       const { data: profile } = await supabaseClient.from('profiles').select('is_admin').eq('id', session.user.id).single();
+      if (gen !== renderGen) return; // une exécution plus récente a pris le relais, on abandonne celle-ci
+      removeAdminLink();
       if (profile && profile.is_admin) {
         const link = document.createElement('a');
         link.id = 'nav-admin-link';
