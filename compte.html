@@ -21,6 +21,13 @@
   .bid-status--outbid { background: #F6DCD8; color: var(--buoy); }
   .bid-status--closed { background: #F1EEE6; color: #5A6772; }
   .empty-state { color: #5A6772; font-size: 0.9rem; padding: 1rem 0; }
+  .moderation-note {
+    margin-top: 0.5rem; padding: 0.6rem 0.8rem; background: #F6DCD8; border-left: 3px solid var(--buoy);
+    border-radius: 3px; font-size: 0.82rem; color: var(--ink); max-width: 420px;
+    overflow-wrap: break-word; word-break: break-word;
+  }
+  .moderation-note--deleted { background: #F1EEE6; border-left-color: #5A6772; }
+  .moderation-note strong { display: block; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 0.15rem; }
   .gate { max-width: 480px; margin: 4rem auto; padding: 2rem; text-align: center; }
 </style>
 </head>
@@ -132,7 +139,7 @@ async function loadMyFavorites(userId) {
 }
 
 function statusPillClass(l) {
-  return { scheduled: 'draft', draft: 'draft', live: 'live', sold: 'sold', unsold: 'cancelled', cancelled: 'cancelled' }[l.status] || 'draft';
+  return { scheduled: 'draft', draft: 'draft', live: 'live', sold: 'sold', unsold: 'cancelled', cancelled: 'cancelled', deleted: 'cancelled' }[l.status] || 'draft';
 }
 
 async function loadMyLots(userId) {
@@ -151,13 +158,19 @@ async function loadMyLots(userId) {
   rows.innerHTML = data.map(l => `
     <tr>
       <td>${l.cover_image_url ? `<img src="${l.cover_image_url}">` : ''}</td>
-      <td><strong>${l.title}</strong><br><span style="color:#5A6772; font-size:0.8rem;">${l.categories?.label || ''} — ${l.region}</span></td>
+      <td>
+        <strong>${l.title}</strong><br><span style="color:#5A6772; font-size:0.8rem;">${l.categories?.label || ''} — ${l.region}</span>
+        ${l.moderation_note ? `<div class="moderation-note ${l.status === 'deleted' ? 'moderation-note--deleted' : ''}">
+          <strong>${l.status === 'deleted' ? 'Motif de suppression' : 'Motif de refus'} :</strong> ${l.moderation_note}
+        </div>` : ''}
+      </td>
       <td>${formatEUR(l.starting_price)}</td>
       <td>${formatEUR(l.current_price)}</td>
-      <td><span class="status-pill status-pill--${statusPillClass(l)}" style="font-family:var(--font-data); font-size:0.7rem; padding:0.2rem 0.55rem; border-radius:999px; background:#F1EEE6; color:#5A6772;">${l.status}</span>
-        ${l.status === 'cancelled' && l.moderation_note ? `<div style="font-size:0.78rem; color:var(--buoy); margin-top:0.3rem; max-width:220px;">Motif : ${l.moderation_note}</div>` : ''}
+      <td><span class="status-pill status-pill--${statusPillClass(l)}" style="font-family:var(--font-data); font-size:0.7rem; padding:0.2rem 0.55rem; border-radius:999px; background:#F1EEE6; color:#5A6772;">${l.status}</span></td>
+      <td style="white-space:nowrap;">
+        ${l.status === 'cancelled' ? `<a href="vendre.html?edit=${l.id}" class="btn btn--primary btn--sm" style="padding:0.35rem 0.7rem; font-size:0.78rem; text-decoration:none;">Corriger et resoumettre</a>` : ''}
+        <a href="lot.html?id=${l.id}" class="btn btn--ghost btn--sm" style="padding:0.35rem 0.7rem; font-size:0.78rem; text-decoration:none;">Voir</a>
       </td>
-      <td><a href="lot.html?id=${l.id}" class="btn btn--ghost btn--sm" style="padding:0.35rem 0.7rem; font-size:0.78rem; text-decoration:none;">Voir</a></td>
     </tr>
   `).join('');
 }

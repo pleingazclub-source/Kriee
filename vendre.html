@@ -55,7 +55,7 @@
 
 <div class="page-band">
   <p class="page-band__eyebrow">Dépôt d'un lot — Kriee</p>
-  <h1 class="page-band__title">Mettre un lot en vente</h1>
+  <h1 class="page-band__title" id="page-title">Mettre un lot en vente</h1>
 </div>
 
 <main class="sell-wrap">
@@ -280,7 +280,7 @@
         <div class="field">
           <label><input type="checkbox" id="confirm-honest" style="width:auto; display:inline-block; margin-right:0.5rem;" required>Je certifie que les informations fournies sont exactes.</label>
         </div>
-        <button type="submit" class="btn btn--primary" style="width:100%; padding:0.85rem;">Soumettre le lot pour modération</button>
+        <button type="submit" class="btn btn--primary" style="width:100%; padding:0.85rem;" id="submit-btn">Soumettre le lot pour modération</button>
         <p id="sell-feedback" style="font-size:0.85rem; margin-top:0.8rem;" role="status"></p>
       </div>
 
@@ -523,7 +523,105 @@ document.getElementById('video').addEventListener('change', (e) => {
   }
 });
 
-restoreDraft();
+// ---------- Mode édition : corriger et resoumettre un lot refusé ----------
+const urlParams = new URLSearchParams(location.search);
+const editLotId = urlParams.get('edit');
+let existingLotData = null; // images/vidéo conservées si aucun nouveau fichier n'est ajouté au moment de la resoumission
+
+async function initEditMode() {
+  if (!editLotId) return;
+
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (!session) { location.href = 'connexion.html'; return; }
+
+  const { data: lot, error } = await supabaseClient
+    .from('lots')
+    .select('*, categories(slug)')
+    .eq('id', editLotId)
+    .eq('seller_id', session.user.id)
+    .single();
+
+  const feedback = document.getElementById('sell-feedback');
+  if (error || !lot) {
+    feedback.textContent = "Ce lot est introuvable ou ne t'appartient pas.";
+    feedback.style.color = 'var(--buoy)';
+    return;
+  }
+  if (lot.status !== 'cancelled') {
+    feedback.textContent = "Seul un lot refusé (pas supprimé définitivement) peut être corrigé et resoumis.";
+    feedback.style.color = 'var(--buoy)';
+    return;
+  }
+
+  existingLotData = { images: lot.images || [], video_url: lot.video_url };
+
+  document.getElementById('page-title').textContent = 'Corriger et resoumettre ton lot';
+  document.getElementById('submit-btn').textContent = 'Resoumettre le lot pour modération';
+
+  document.getElementById('category').value = lot.categories?.slug || 'voile';
+  document.getElementById('title').value = lot.title;
+  document.getElementById('region').value = lot.region;
+  document.getElementById('port').value = lot.port_location || '';
+  document.getElementById('starting').value = lot.starting_price;
+  document.getElementById('reserve').value = lot.reserve_price;
+  document.getElementById('increment').value = lot.bid_increment;
+
+  const isEquip = document.getElementById('category').value === 'equipement';
+  const g = lot.specs?.general || {};
+
+  if (isEquip) {
+    document.getElementById('e-type').value = g["Type d'équipement"] || '';
+    document.getElementById('e-marque').value = g['Marque'] || '';
+    document.getElementById('e-modele').value = g['Modèle'] || '';
+    document.getElementById('e-etat').value = g['État'] || '';
+    document.getElementById('e-annee').value = g["Année d'achat"] || '';
+    document.getElementById('e-poids').value = g['Poids (kg)'] || '';
+    document.getElementById('e-compat').value = g['Compatibilité'] || '';
+  } else {
+    document.getElementById('b-marque').value = g['Marque'] || '';
+    document.getElementById('b-modele').value = g['Modèle / Type'] || '';
+    document.getElementById('b-annee').value = g['Année de construction'] || '';
+    document.getElementById('b-longueur').value = g['Longueur (m)'] || '';
+    document.getElementById('b-largeur').value = g['Largeur (m)'] || '';
+    document.getElementById('b-tirant').value = g["Tirant d'eau (m)"] || '';
+    document.getElementById('b-materiau').value = g['Matériau'] || '';
+    document.getElementById('b-couchages').value = g['Nombre de couchettes'] || '';
+    document.getElementById('b-immat').value = g['Immatriculation'] || '';
+
+    const m = lot.specs?.moteur || {};
+    document.getElementById('m-type').value = m['Type de moteur'] || '';
+    document.getElementById('m-marque').value = m['Marque moteur'] || '';
+    document.getElementById('m-puissance').value = m['Puissance (ch)'] || '';
+    document.getElementById('m-heures').value = m['Heures moteur'] || '';
+
+    const nav = lot.specs?.navigation || {};
+    document.querySelectorAll('#nav-checks input[type="checkbox"]').forEach(cb => { cb.checked = !!nav[cb.value]; });
+
+    const gre = lot.specs?.greement || {};
+    document.querySelectorAll('#greement-checks input[type="checkbox"]').forEach(cb => { cb.checked = !!gre[cb.value]; });
+    document.getElementById('g-mats').value = gre['Nombre de mâts'] || '';
+    document.getElementById('g-etat').value = gre['État des voiles'] || '';
+
+    const sec = lot.specs?.securite || {};
+    document.querySelectorAll('#securite-checks input[type="checkbox"]').forEach(cb => { cb.checked = !!sec[cb.value]; });
+  }
+
+  document.getElementById('description').value = lot.description || '';
+  document.getElementById('documents').value = (lot.specs?.documents || []).join('\n');
+
+  if (existingLotData.images.length) {
+    document.getElementById('photos-list').insertAdjacentHTML('beforebegin',
+      `<p class="hint" style="margin-top:0.6rem;">Photos actuelles conservées — ajoute de nouvelles photos ci-dessus pour toutes les remplacer.</p>
+       <div class="media-preview">${existingLotData.images.map(url => `<img src="${url}">`).join('')}</div>`
+    );
+  }
+
+  syncRequiredFields();
+  showStep();
+}
+
+if (!editLotId) restoreDraft();
+initEditMode();
 
 document.getElementById('sell-form').addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -615,8 +713,8 @@ document.getElementById('sell-form').addEventListener('submit', async (e) => {
   // Upload des photos/vidéo avant l'insertion — le lot n'est créé qu'une fois les fichiers en ligne
   const photoFiles = selectedPhotos;
   const videoFile = document.getElementById('video').files[0];
-  let imageUrls = [];
-  let videoUrl = null;
+  let imageUrls = existingLotData ? existingLotData.images : [];
+  let videoUrl = existingLotData ? existingLotData.video_url : null;
 
   if (photoFiles.length || videoFile) {
     feedback.textContent = `Envoi des fichiers (0/${photoFiles.length + (videoFile ? 1 : 0)})...`;
@@ -624,10 +722,13 @@ document.getElementById('sell-form').addEventListener('submit', async (e) => {
   }
   let uploaded = 0;
   const totalFiles = photoFiles.length + (videoFile ? 1 : 0);
-  for (const file of photoFiles) {
-    imageUrls.push(await uploadLotMedia(file, session.user.id));
-    uploaded++;
-    if (totalFiles) feedback.textContent = `Envoi des fichiers (${uploaded}/${totalFiles})...`;
+  if (photoFiles.length) {
+    imageUrls = []; // remplace entièrement les anciennes photos dès qu'on en ajoute de nouvelles
+    for (const file of photoFiles) {
+      imageUrls.push(await uploadLotMedia(file, session.user.id));
+      uploaded++;
+      if (totalFiles) feedback.textContent = `Envoi des fichiers (${uploaded}/${totalFiles})...`;
+    }
   }
   if (videoFile) {
     videoUrl = await uploadLotMedia(videoFile, session.user.id);
@@ -635,8 +736,7 @@ document.getElementById('sell-form').addEventListener('submit', async (e) => {
     feedback.textContent = `Envoi des fichiers (${uploaded}/${totalFiles})...`;
   }
 
-  const { error } = await supabaseClient.from('lots').insert({
-    seller_id: session.user.id,
+  const payload = {
     category_id: cat.id,
     title: document.getElementById('title').value,
     description: document.getElementById('description').value,
@@ -655,7 +755,16 @@ document.getElementById('sell-form').addEventListener('submit', async (e) => {
     status: 'draft',
     starts_at: new Date().toISOString(),
     ends_at: new Date(Date.now() + 1000 * 60 * 60 * 24 * Number(document.getElementById('duration').value)).toISOString(),
-  });
+  };
+
+  let error;
+  if (editLotId) {
+    payload.moderation_note = null; // repart propre après correction
+    ({ error } = await supabaseClient.from('lots').update(payload).eq('id', editLotId));
+  } else {
+    payload.seller_id = session.user.id;
+    ({ error } = await supabaseClient.from('lots').insert(payload));
+  }
 
   if (error) {
     feedback.textContent = error.message;
@@ -670,6 +779,12 @@ document.getElementById('sell-form').addEventListener('submit', async (e) => {
     document.getElementById('wizard-nav').style.display = 'none';
     document.getElementById('wizard-tabs').style.display = 'none';
     document.querySelector('.wizard-progress-row').style.display = 'none';
+    if (editLotId) {
+      document.querySelector('#step5-success .section-title').textContent = '✓ Lot resoumis';
+      document.querySelector('#step5-success .hint').textContent = 'Il repasse en modération avant remise en ligne.';
+      document.getElementById('new-lot-btn').textContent = 'Retour à mon compte';
+      document.getElementById('new-lot-btn').onclick = () => { location.href = 'compte.html'; };
+    }
   }
   } catch (err) {
     feedback.textContent = 'Erreur inattendue : ' + err.message;

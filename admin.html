@@ -131,6 +131,7 @@
     <button class="chip" data-filter="sold">Vendus</button>
     <button class="chip" data-filter="unsold">Invendus</button>
     <button class="chip" data-filter="cancelled">Refusés</button>
+    <button class="chip" data-filter="deleted">Supprimés</button>
     <button class="chip" data-filter="all">Tous</button>
   </div>
   <div class="admin-filters" role="group" aria-label="Filtrer par statut de réserve">
@@ -157,7 +158,7 @@
 
 <div class="modal-overlay" id="reject-modal">
   <div class="modal-box">
-    <h3>Refuser ce lot</h3>
+    <h3 id="reject-modal-title">Refuser ce lot</h3>
     <div class="field">
       <label for="reject-reason-select">Motif</label>
       <select id="reject-reason-select">
@@ -175,7 +176,7 @@
     </div>
     <div class="modal-actions">
       <button type="button" class="btn btn--ghost btn--sm" id="reject-cancel">Annuler</button>
-      <button type="button" class="btn--danger btn--sm" id="reject-confirm" style="padding:0.5rem 1rem;">Confirmer le refus</button>
+      <button type="button" class="btn--danger btn--sm" id="reject-confirm" style="padding:0.5rem 1rem;">Confirmer</button>
     </div>
   </div>
 </div>
@@ -274,11 +275,12 @@ function render() {
         ${formatEUR(l.current_price)} <span class="reserve-badge ${met ? 'reserve-badge--met' : 'reserve-badge--not'}">${met ? '✓ Réserve atteinte' : 'Réserve non atteinte'}</span>
         <span class="reserve-cell__gap">Réserve : ${formatEUR(l.reserve_price)}${met ? '' : ` (manque ${formatEUR(gap)})`}</span>
       </td>
-      <td><span class="status-pill status-pill--${l.status === 'scheduled' ? 'draft' : l.status}">${l.status}</span></td>
+      <td><span class="status-pill status-pill--${l.status === 'scheduled' ? 'draft' : (l.status === 'deleted' ? 'cancelled' : l.status)}">${l.status}</span></td>
       <td class="admin-actions">
         ${l.status === 'draft' ? `<button class="btn btn--primary btn--sm" data-action="publish" data-id="${l.id}" data-title="${l.title}">Publier</button>` : ''}
         ${l.status === 'live' ? `<button class="btn btn--ghost btn--sm" data-action="unlist" data-id="${l.id}" data-title="${l.title}">Dépublier</button>` : ''}
-        ${l.status !== 'cancelled' ? `<button class="btn--danger btn--sm" data-action="reject" data-id="${l.id}" data-title="${l.title}">Refuser</button>` : ''}
+        ${l.status !== 'cancelled' && l.status !== 'deleted' ? `<button class="btn--danger btn--sm" data-action="reject" data-id="${l.id}" data-title="${l.title}">Refuser</button>` : ''}
+        ${l.status !== 'deleted' ? `<button class="btn--danger btn--sm" data-action="delete" data-id="${l.id}" data-title="${l.title}" style="background:var(--buoy); color:var(--foam);">Supprimer</button>` : ''}
         <a href="lot.html?id=${l.id}" class="btn btn--ghost btn--sm" style="text-decoration:none;">Voir</a>
       </td>
     </tr>
@@ -288,7 +290,7 @@ function render() {
   rows.querySelectorAll('button[data-action]').forEach(btn => {
     btn.addEventListener('click', () => {
       const { action, id, title } = btn.dataset;
-      if (action === 'reject') openRejectModal(id, title);
+      if (action === 'reject' || action === 'delete') openRejectModal(id, title, action);
       else handleAction(action, id, title);
     });
   });
@@ -321,13 +323,17 @@ async function handleAction(action, id, title) {
   showToast(messages[action], 'success');
 }
 
-// ---------- Modale de refus avec motif ----------
+// ---------- Modale de refus / suppression avec motif ----------
 let pendingRejectId = null;
 let pendingRejectTitle = '';
+let pendingAction = 'reject'; // 'reject' (refus, corrigible) ou 'delete' (suppression définitive)
 
-function openRejectModal(id, title) {
+function openRejectModal(id, title, action) {
   pendingRejectId = id;
   pendingRejectTitle = title;
+  pendingAction = action;
+  document.getElementById('reject-modal-title').textContent = action === 'delete' ? 'Supprimer ce lot' : 'Refuser ce lot';
+  document.getElementById('reject-confirm').textContent = action === 'delete' ? 'Confirmer la suppression' : 'Confirmer le refus';
   document.getElementById('reject-reason-select').selectedIndex = 0;
   document.getElementById('reject-reason-detail').value = '';
   document.getElementById('reject-modal').style.display = 'flex';
@@ -351,11 +357,17 @@ document.getElementById('reject-confirm').addEventListener('click', async () => 
     ? detail
     : (detail ? `${select.value} — ${detail}` : select.value);
 
-  const { error } = await supabaseClient.from('lots').update({ status: 'cancelled', moderation_note: reason }).eq('id', pendingRejectId);
+  const newStatus = pendingAction === 'delete' ? 'deleted' : 'cancelled';
+  const { error } = await supabaseClient.from('lots').update({ status: newStatus, moderation_note: reason }).eq('id', pendingRejectId);
   document.getElementById('reject-modal').style.display = 'none';
 
-  if (error) showToast('Erreur : ' + error.message, 'error');
-  else showToast(`"${pendingRejectTitle}" refusé — le motif est visible par le vendeur dans son espace Mon compte.`, 'success');
+  if (error) {
+    showToast('Erreur : ' + error.message, 'error');
+  } else if (pendingAction === 'delete') {
+    showToast(`"${pendingRejectTitle}" supprimé définitivement — le motif reste visible par le vendeur, mais le lot n'est plus modifiable.`, 'success');
+  } else {
+    showToast(`"${pendingRejectTitle}" refusé — le vendeur peut le corriger et le resoumettre depuis son espace Mon compte.`, 'success');
+  }
 
   pendingRejectId = null;
 });
