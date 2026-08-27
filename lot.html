@@ -76,17 +76,26 @@
 
     <div id="bid-form-wrap">
       <form class="bid-form" id="bid-form">
-        <input type="number" id="bid-amount" step="1" required aria-label="Ton plafond maximum">
+        <input type="number" id="bid-amount" step="1" required aria-label="Montant de ton enchère">
         <button type="submit" class="btn btn--primary">Enchérir</button>
       </form>
       <p id="bid-min-hint" style="font-size:0.78rem; color:#5A6772; margin-top:-0.6rem;"></p>
-      <p class="hint" style="font-size:0.76rem; margin:0.5rem 0 0.8rem;">C'est ton plafond maximum, jamais visible des autres — on enchérit pour toi automatiquement, par palier, jusqu'à ce montant. Le prix affiché ne monte que si un autre acheteur te dépasse réellement.</p>
+      <div style="display:flex; gap:1.2rem; margin:0.6rem 0 0.3rem; font-size:0.85rem;">
+        <label style="display:flex; align-items:center; gap:0.35rem; cursor:pointer;">
+          <input type="radio" name="bid-mode" id="bid-mode-normal" value="normal" checked> Normale
+        </label>
+        <label style="display:flex; align-items:center; gap:0.35rem; cursor:pointer;">
+          <input type="radio" name="bid-mode" id="bid-mode-auto" value="auto"> Automatique
+        </label>
+      </div>
+      <p class="hint" id="bid-mode-hint" style="font-size:0.76rem; margin:0.2rem 0 0.8rem;">Ton enchère devient immédiatement le prix affiché, visible de tous.</p>
       <label style="display:flex; align-items:flex-start; gap:0.5rem; font-size:0.82rem; margin-bottom:0.8rem; cursor:pointer;">
         <input type="checkbox" id="bid-commitment" required style="margin-top:0.2rem;">
         Je m'engage à payer si je remporte ce lot à ce prix ou en dessous.
       </label>
     </div>
     <p id="own-lot-note" style="display:none; font-size:0.85rem; color:#5A6772; background:var(--chalk); padding:0.8rem 1rem; border-radius:3px; margin-bottom:0.8rem;">C'est ton propre lot — tu ne peux pas enchérir dessus.</p>
+    <p id="own-ceiling-note" style="display:none; font-size:1rem; background:#DCEFE3; padding:0.9rem 1rem; border-radius:3px; margin-bottom:0.8rem;"></p>
     <p id="bid-feedback" style="font-size:0.85rem;" role="status"></p>
 
     <div class="price-breakdown" id="price-breakdown"></div>
