@@ -71,7 +71,7 @@
     <p class="lead">Nécessaire pour enchérir ou déposer un lot.</p>
 
     <div class="tabs" role="tablist">
-      <button class="tab" id="tab-magic" role="tab" aria-selected="true">Lien magique</button>
+      <button class="tab" id="tab-magic" role="tab" aria-selected="true">Connexion sans mot de passe</button>
       <button class="tab" id="tab-password" role="tab" aria-selected="false">Email + mot de passe</button>
     </div>
 
@@ -80,7 +80,7 @@
       <form id="magic-form">
         <div class="field">
           <label for="magic-email">Adresse email</label>
-          <input type="email" id="magic-email" required placeholder="toi@exemple.fr">
+          <input type="email" id="magic-email" required placeholder="toi@exemple.fr" autocomplete="email" name="email">
         </div>
         <button type="submit" class="btn btn--primary" style="width:100%; padding:0.75rem;">Recevoir le lien de connexion</button>
       </form>
@@ -91,11 +91,15 @@
       <form id="password-form">
         <div class="field">
           <label for="pw-email">Adresse email</label>
-          <input type="email" id="pw-email" required placeholder="toi@exemple.fr">
+          <input type="email" id="pw-email" required placeholder="toi@exemple.fr" autocomplete="username" name="username">
         </div>
         <div class="field">
           <label for="pw-password">Mot de passe</label>
-          <input type="password" id="pw-password" required minlength="6">
+          <div style="display:flex; gap:0.5rem;">
+            <input type="password" id="pw-password" required minlength="8" autocomplete="new-password" name="new-password" style="flex:1;">
+            <button type="button" id="generate-password-btn" class="btn btn--ghost" style="white-space:nowrap; padding:0.6rem 0.9rem; font-size:0.8rem;">Générer</button>
+          </div>
+          <p class="hint" style="font-size:0.74rem; margin:0.35rem 0 0;">Ton navigateur peut aussi te proposer et enregistrer un mot de passe fort automatiquement.</p>
         </div>
         <button type="submit" class="btn btn--primary" style="width:100%; padding:0.75rem;">Se connecter</button>
       </form>
@@ -178,12 +182,34 @@ document.getElementById('password-form').addEventListener('submit', async (e) =>
   else location.href = 'index.html';
 });
 
+// Génère un mot de passe fort côté client — utile quand le gestionnaire du navigateur ne se déclenche pas.
+function generateStrongPassword(length = 16) {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%^&*';
+  const random = new Uint32Array(length);
+  crypto.getRandomValues(random);
+  return Array.from(random, n => chars[n % chars.length]).join('');
+}
+
+document.getElementById('generate-password-btn').addEventListener('click', async () => {
+  const password = generateStrongPassword();
+  const input = document.getElementById('pw-password');
+  input.type = 'text';
+  input.value = password;
+  try {
+    await navigator.clipboard.writeText(password);
+    setFeedback('Mot de passe généré et copié dans le presse-papiers — colle-le dans ton gestionnaire si besoin.', false);
+  } catch (err) {
+    setFeedback('Mot de passe généré (copie-le manuellement, le presse-papiers n\'est pas accessible ici).', false);
+  }
+  setTimeout(() => { input.type = 'password'; }, 5000);
+});
+
 // Créer un compte avec email + mot de passe (self-service)
 document.getElementById('signup-btn').addEventListener('click', async () => {
   const email = document.getElementById('pw-email').value;
   const password = document.getElementById('pw-password').value;
-  if (!email || !password || password.length < 6) {
-    setFeedback('Renseigne un email et un mot de passe (6 caractères min.) avant de créer le compte.', true);
+  if (!email || !password || password.length < 8) {
+    setFeedback('Renseigne un email et un mot de passe (8 caractères min.) avant de créer le compte.', true);
     return;
   }
   setFeedback('Création du compte…', false);
