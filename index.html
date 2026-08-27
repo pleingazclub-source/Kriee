@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Kriee — Ventes aux enchères de bateaux et équipement nautique, Sud de la France</title>
 <meta name="description" content="Enchères de voiliers, bateaux à moteur, semi-rigides et accastillage entre particuliers du Sud de la France. Vente sans frais vendeur.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -16,7 +19,12 @@
 </div>
 
 <header class="site-header">
-  <a href="index.html" class="brand">Kri<span style="color:var(--buoy)">ee</span>
+  <a href="index.html" class="brand">
+    <svg class="brand__mark" width="24" height="26" viewBox="0 0 24 26" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <line x1="5" y1="1" x2="5" y2="25" stroke="#0E2233" stroke-width="2"/>
+      <path d="M5 3 L21 8.5 L5 14 Z" fill="#C7401F"/>
+    </svg>
+    <span class="brand__word">Kri<span style="color:var(--buoy)">ee</span></span>
     <span class="brand__sub">SUD DE LA FRANCE</span>
   </a>
   <nav class="site-nav">
@@ -66,6 +74,8 @@
 <main id="lots" class="lots-grid" aria-live="polite">
   <!-- rempli en JS, avec squelette de démo si Supabase n'est pas encore configuré -->
 </main>
+
+<div class="divider" aria-hidden="true"><span class="divider__mark"></span></div>
 
 <footer class="site-footer" id="comment-ca-marche">
   <strong>Kriee</strong> — plateforme d'enchères nautiques entre particuliers, lancée dans le Sud de la France.
