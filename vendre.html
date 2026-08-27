@@ -47,6 +47,8 @@
 
 <main class="sell-wrap">
   <p class="lead">0% de frais vendeur — vous êtes payé au prix marteau. Le lot passe en modération avant sa mise en ligne.</p>
+  <p id="draft-status" style="font-size:0.78rem; color:#5A6772; margin-top:-1rem;"></p>
+  <button type="button" id="clear-draft" class="link-btn" style="display:none; background:none; border:none; color:var(--mistral); text-decoration:underline; cursor:pointer; font-size:0.78rem; padding:0; margin-top:-0.8rem; margin-bottom:1rem;">Effacer le brouillon et recommencer</button>
 
   <div class="spec-tabs" role="tablist" id="wizard-tabs"></div>
   <div class="wizard-progress-row">
@@ -335,6 +337,59 @@ function parseLines(text) {
   return text.split('\n').map(l => l.trim()).filter(Boolean);
 }
 
+// ---------- Brouillon auto-sauvegardé (survit aux coupures réseau / rechargements) ----------
+const DRAFT_KEY = 'kriee-draft-lot';
+const CHECK_GROUPS = ['nav-checks', 'greement-checks', 'securite-checks'];
+
+function saveDraft() {
+  const fields = {};
+  document.querySelectorAll('#sell-form input[id], #sell-form select[id], #sell-form textarea[id]').forEach(el => {
+    if (el.type === 'checkbox') return;
+    fields[el.id] = el.value;
+  });
+  const checks = {};
+  CHECK_GROUPS.forEach(id => { checks[id] = checkedValues(id); });
+  localStorage.setItem(DRAFT_KEY, JSON.stringify({ fields, checks, stepIndex }));
+  document.getElementById('draft-status').textContent = 'Brouillon enregistré automatiquement.';
+}
+
+function restoreDraft() {
+  const raw = localStorage.getItem(DRAFT_KEY);
+  if (!raw) return;
+  try {
+    const draft = JSON.parse(raw);
+    Object.entries(draft.fields || {}).forEach(([id, val]) => {
+      const el = document.getElementById(id);
+      if (el) el.value = val;
+    });
+    CHECK_GROUPS.forEach(id => {
+      const values = (draft.checks || {})[id] || [];
+      document.querySelectorAll(`#${id} input[type="checkbox"]`).forEach(cb => { cb.checked = values.includes(cb.value); });
+    });
+    syncRequiredFields();
+    if (typeof draft.stepIndex === 'number') stepIndex = draft.stepIndex;
+    showStep();
+    document.getElementById('draft-status').textContent = 'Brouillon restauré depuis ta dernière session.';
+    document.getElementById('clear-draft').style.display = 'inline';
+  } catch (err) { /* brouillon corrompu, ignoré silencieusement */ }
+}
+
+function clearDraft() {
+  localStorage.removeItem(DRAFT_KEY);
+  document.getElementById('sell-form').reset();
+  stepIndex = 0;
+  syncRequiredFields();
+  showStep();
+  document.getElementById('draft-status').textContent = '';
+  document.getElementById('clear-draft').style.display = 'none';
+}
+
+document.getElementById('sell-form').addEventListener('input', saveDraft);
+document.getElementById('sell-form').addEventListener('change', saveDraft);
+document.getElementById('clear-draft').addEventListener('click', clearDraft);
+
+restoreDraft();
+
 document.getElementById('sell-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const feedback = document.getElementById('sell-feedback');
@@ -441,6 +496,9 @@ document.getElementById('sell-form').addEventListener('submit', async (e) => {
   } else {
     feedback.textContent = 'Lot soumis. Il passera en ligne après modération.';
     feedback.style.color = 'var(--mistral)';
+    localStorage.removeItem(DRAFT_KEY);
+    document.getElementById('draft-status').textContent = '';
+    document.getElementById('clear-draft').style.display = 'none';
     e.target.reset();
     stepIndex = 0;
     showStep();
