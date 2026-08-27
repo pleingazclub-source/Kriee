@@ -33,3 +33,13 @@ function formatCountdown(endsAt) {
   if (h > 24) return `${Math.floor(h / 24)} j`;
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
+
+// Upload un fichier vers le bucket lot-media, sous le dossier de l'utilisateur connecté. Retourne l'URL publique.
+async function uploadLotMedia(file, userId) {
+  const ext = file.name.split('.').pop();
+  const path = `${userId}/${crypto.randomUUID()}.${ext}`;
+  const { error } = await supabaseClient.storage.from('lot-media').upload(path, file);
+  if (error) throw error;
+  const { data } = supabaseClient.storage.from('lot-media').getPublicUrl(path);
+  return data.publicUrl;
+}
