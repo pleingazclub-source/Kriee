@@ -84,7 +84,7 @@
         </div>
         <div class="field">
           <label for="port">Port / lieu de visite</label>
-          <input type="text" id="port" placeholder="Ex. Saint-Mandrier-sur-Mer">
+          <input type="text" id="port" required placeholder="Ex. Saint-Mandrier-sur-Mer">
         </div>
       </div>
 
@@ -139,7 +139,7 @@
       <p class="section-title">Caractéristiques de l'équipement</p>
       <div class="field-row">
         <div class="field"><label for="e-type">Type d'équipement</label>
-          <select id="e-type">
+          <select id="e-type" required>
             <option value=""></option>
             <option>Voile / gréement</option><option>Moteur</option><option>Électronique / navigation</option>
             <option>Sécurité</option><option>Accastillage divers</option><option>Remorque</option><option>Autre</option>
@@ -304,12 +304,21 @@ function goToStep(i) { stepIndex = i; showStep(); }
 
 document.getElementById('wizard-next').addEventListener('click', () => {
   const steps = currentSteps();
+  const currentPanel = document.querySelector(`.spec-panel[data-step="${steps[stepIndex]}"]`);
+  const invalidField = currentPanel.querySelector(':invalid');
+  if (invalidField) { invalidField.reportValidity(); return; }
   if (stepIndex < steps.length - 1) { stepIndex++; showStep(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
 });
 document.getElementById('wizard-prev').addEventListener('click', () => {
   if (stepIndex > 0) { stepIndex--; showStep(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
 });
-document.getElementById('category').addEventListener('change', () => { stepIndex = 0; showStep(); });
+document.getElementById('category').addEventListener('change', () => { stepIndex = 0; showStep(); syncRequiredFields(); });
+
+function syncRequiredFields() {
+  const isEquip = document.getElementById('category').value === 'equipement';
+  document.getElementById('e-type').required = isEquip;
+}
+syncRequiredFields();
 
 showStep();
 
@@ -337,17 +346,23 @@ document.getElementById('sell-form').addEventListener('submit', async (e) => {
     return;
   }
 
-  const { data: { session } } = await supabaseClient.auth.getSession();
-  if (!session) {
-    feedback.textContent = 'Connecte-toi pour déposer un lot.';
-    feedback.style.color = 'var(--buoy)';
-    return;
-  }
+  try {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (!session) {
+      feedback.textContent = 'Connecte-toi pour déposer un lot.';
+      feedback.style.color = 'var(--buoy)';
+      return;
+    }
 
   const categorySlug = document.getElementById('category').value;
   const isEquip = categorySlug === 'equipement';
 
-  const { data: cat } = await supabaseClient.from('categories').select('id').eq('slug', categorySlug).single();
+  const { data: cat, error: catError } = await supabaseClient.from('categories').select('id').eq('slug', categorySlug).single();
+  if (catError || !cat) {
+    feedback.textContent = 'Erreur lors de la lecture des catégories : ' + (catError ? catError.message : 'catégorie introuvable') + '. Vérifie que la table categories a bien une policy de lecture publique.';
+    feedback.style.color = 'var(--buoy)';
+    return;
+  }
 
   let generalSpecs = {};
   if (isEquip) {
@@ -429,6 +444,11 @@ document.getElementById('sell-form').addEventListener('submit', async (e) => {
     e.target.reset();
     stepIndex = 0;
     showStep();
+  }
+  } catch (err) {
+    feedback.textContent = 'Erreur inattendue : ' + err.message;
+    feedback.style.color = 'var(--buoy)';
+    console.error(err);
   }
 });
 </script>
