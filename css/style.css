@@ -6,7 +6,12 @@
    Data    : IBM Plex Mono (compte à rebours, montants — cadran d'instrument)
    ============================================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap');
+/* Polices chargées via <link> dans le <head> de chaque page — voir index.html etc. Plus rapide et fiable qu'un @import CSS. */
+
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+}
 
 :root {
   --ink: #0E2233;        /* nuit de quart */
@@ -83,9 +88,11 @@ a { color: inherit; }
   text-decoration: none;
   letter-spacing: 0.01em;
   display: flex;
-  align-items: baseline;
-  gap: 0.5rem;
+  align-items: center;
+  gap: 0.6rem;
 }
+.brand__mark { flex-shrink: 0; }
+.brand__word { display: flex; align-items: baseline; gap: 0.5rem; }
 .brand__sub {
   font-family: var(--font-data);
   font-size: 0.65rem;
@@ -114,10 +121,25 @@ a { color: inherit; }
   display: inline-block;
 }
 .btn:focus-visible { outline: 3px solid var(--mistral); outline-offset: 2px; }
-.btn--primary { background: var(--buoy); color: var(--foam); }
+/* Le bouton principal reprend la découpe d'un pavillon de signalisation — signature du site */
+.btn--primary {
+  background: var(--buoy);
+  color: var(--foam);
+  border-radius: 0;
+  padding-right: 1.7rem;
+  clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%);
+}
 .btn--primary:hover { background: #a8341a; }
 .btn--ghost { background: transparent; color: var(--ink); border: 1px solid var(--ink); }
 .btn--ghost:hover { background: var(--ink); color: var(--foam); }
+
+/* ---------- Divider "point de compas" — utilisé entre sections clés ---------- */
+.divider {
+  display: flex; align-items: center; gap: 0.8rem;
+  margin: 2.5rem 0; padding: 0 2rem; max-width: 1400px; margin-left: auto; margin-right: auto;
+}
+.divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: #D8D2C2; }
+.divider__mark { width: 7px; height: 7px; background: var(--brass); transform: rotate(45deg); flex-shrink: 0; }
 
 /* ---------- Hero : le signal, pas un carrousel ---------- */
 .hero {
@@ -133,7 +155,15 @@ a { color: inherit; }
   opacity: 0.14;
   background-image:
     repeating-linear-gradient(100deg, transparent 0 60px, var(--brass) 60px 61px, transparent 61px 140px);
+  animation: gust-drift 14s linear infinite;
   pointer-events: none;
+}
+@keyframes gust-drift {
+  from { background-position: 0 0; }
+  to { background-position: 400px 160px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero__gust { animation: none; }
 }
 .hero__inner { max-width: 900px; position: relative; }
 .hero__eyebrow {
@@ -230,13 +260,14 @@ a { color: inherit; }
   color: var(--ink);
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: 0.85rem;
-  width: 28px;
-  height: 28px;
+  font-size: 0.95rem;
+  width: 34px;
+  height: 40px;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  border-radius: 2px;
+  padding-top: 0.35rem;
+  clip-path: polygon(0 0, 100% 0, 100% 78%, 50% 100%, 0 78%);
 }
 .lot-card__timer {
   position: absolute;
@@ -294,8 +325,16 @@ a { color: inherit; }
 }
 .spec-tab[aria-selected="true"] { color: var(--ink); border-color: var(--buoy); font-weight: 600; }
 .spec-tab:hover { color: var(--ink); }
+.spec-tab.spec-tab--done::after { content: ' ✓'; color: var(--mistral); }
 .spec-panel { display: none; padding: 1.2rem 0; }
-.spec-panel.active { display: block; }
+.spec-panel.active { display: block; animation: panel-fade-in 0.32s ease; }
+@keyframes panel-fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .spec-panel.active { animation: none; }
+}
 .spec-panel .spec-table { margin: 0; }
 .spec-panel__empty { color: #5A6772; font-size: 0.88rem; }
 .doc-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.5rem; }
@@ -318,6 +357,8 @@ a { color: inherit; }
 }
 .check-grid input { accent-color: var(--buoy); width: 16px; height: 16px; }
 .wizard-nav { display: flex; justify-content: space-between; margin-top: 1.5rem; }
+.wizard-progress { height: 3px; background: #E4DFD3; margin-bottom: 1.6rem; overflow: hidden; }
+.wizard-progress__bar { height: 100%; background: var(--buoy); transition: width 0.3s ease; }
 .section-title { font-family: var(--font-display); font-size: 1.1rem; margin: 1.6rem 0 0.4rem; }
 .section-title:first-child { margin-top: 0; }
 .hint { font-size: 0.8rem; color: #5A6772; margin: -0.5rem 0 1rem; }
