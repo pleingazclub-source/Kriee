@@ -203,6 +203,12 @@ document.getElementById('bid-form').addEventListener('submit', async (e) => {
   const feedback = document.getElementById('bid-feedback');
   const isConfigured = !SUPABASE_URL.includes('TON-PROJET');
 
+  if (currentLot && new Date(currentLot.ends_at).getTime() <= Date.now()) {
+    feedback.textContent = 'Cette enchère est terminée — plus aucune enchère n\'est possible.';
+    feedback.style.color = 'var(--buoy)';
+    return;
+  }
+
   if (!isConfigured || lotId.startsWith('demo')) {
     feedback.textContent = 'Démo : connecte Supabase (js/supabase-client.js) pour enchérir réellement.';
     feedback.style.color = 'var(--mistral)';
@@ -226,8 +232,107 @@ document.getElementById('bid-form').addEventListener('submit', async (e) => {
   }
 });
 
+// ---------- Mise en scène des 3 dernières secondes : sons synthétisés (aucun fichier audio requis) ----------
+let audioCtx = null;
+function getAudioCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+document.addEventListener('click', () => { try { getAudioCtx(); } catch (e) {} }, { once: true });
+
+function playTick() {
+  try {
+    const ctx = getAudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = 880;
+    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.12);
+  } catch (e) {}
+}
+
+function playGavel() {
+  try {
+    const ctx = getAudioCtx();
+    // deux coups de marteau : thud grave, façon "toc-toc" du commissaire-priseur
+    [0, 0.2].forEach(delay => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(130, ctx.currentTime + delay);
+      osc.frequency.exponentialRampToValueAtTime(40, ctx.currentTime + delay + 0.16);
+      gain.gain.setValueAtTime(0.55, ctx.currentTime + delay);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.22);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(ctx.currentTime + delay);
+      osc.stop(ctx.currentTime + delay + 0.22);
+    });
+  } catch (e) {}
+}
+
+function flashScreen(strong) {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const overlay = document.getElementById('flash-overlay');
+  if (!overlay) return;
+  overlay.style.opacity = strong ? '0.85' : '0.45';
+  setTimeout(() => { overlay.style.opacity = '0'; }, strong ? 200 : 100);
+}
+
+let lastEndsAtTracked = null;
+let firedThresholds = new Set();
+let closingResolved = false;
+let hasInitializedClosing = false;
+
+function tickClosingSequence() {
+  if (!currentLot) return;
+  const panel = document.querySelector('.bid-panel');
+  const banner = document.getElementById('adjuge-banner');
+  const endsAt = currentLot.ends_at;
+
+  if (endsAt !== lastEndsAtTracked) {
+    // La clôture a changé (nouvelle prolongation anti-sniping, ou premier chargement) : on repart à zéro.
+    lastEndsAtTracked = endsAt;
+    firedThresholds = new Set();
+    closingResolved = false;
+    panel.classList.remove('closing-tick');
+    banner.style.display = 'none';
+    document.getElementById('bid-amount').disabled = false;
+    document.querySelector('#bid-form button[type="submit"]').disabled = false;
+  }
+
+  const diff = new Date(endsAt).getTime() - Date.now();
+
+  if (diff > 0 && diff <= 3000) {
+    panel.classList.add('closing-tick');
+    const secondsLeft = Math.ceil(diff / 1000);
+    if (!firedThresholds.has(secondsLeft)) {
+      firedThresholds.add(secondsLeft);
+      if (hasInitializedClosing) { playTick(); flashScreen(false); }
+    }
+  } else if (diff <= 0 && !closingResolved) {
+    closingResolved = true;
+    panel.classList.remove('closing-tick');
+    if (hasInitializedClosing) { playGavel(); flashScreen(true); }
+    banner.style.display = 'flex';
+    document.getElementById('bid-amount').disabled = true;
+    document.querySelector('#bid-form button[type="submit"]').disabled = true;
+  } else if (diff > 3000) {
+    panel.classList.remove('closing-tick');
+  }
+
+  hasInitializedClosing = true; // pas de son/flash sur le tout premier rendu de la page
+}
+
 setInterval(() => {
-  if (currentLot) document.getElementById('bid-timer').textContent = formatCountdown(currentLot.ends_at);
+  if (currentLot) {
+    document.getElementById('bid-timer').textContent = formatCountdown(currentLot.ends_at);
+    tickClosingSequence();
+  }
 }, 1000);
 
 loadLot();
