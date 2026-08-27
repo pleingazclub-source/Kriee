@@ -94,14 +94,14 @@ a { color: inherit; }
   letter-spacing: 0.08em;
 }
 .site-nav { display: flex; gap: 1.8rem; align-items: center; }
-.site-nav a {
+.site-nav a:not(.btn) {
   text-decoration: none;
   font-size: 0.92rem;
   color: var(--ink);
   border-bottom: 2px solid transparent;
   padding-bottom: 2px;
 }
-.site-nav a:hover, .site-nav a:focus-visible { border-color: var(--brass); }
+.site-nav a:not(.btn):hover, .site-nav a:not(.btn):focus-visible { border-color: var(--brass); }
 .btn {
   font-family: var(--font-body);
   font-weight: 600;
