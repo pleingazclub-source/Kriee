@@ -272,6 +272,56 @@ a { color: inherit; }
 .spec-table td { padding: 0.5rem 0; border-bottom: 1px solid #E4DFD3; }
 .spec-table td:first-child { color: #5A6772; width: 40%; }
 
+/* ---------- Onglets de caractéristiques (fiche lot) ---------- */
+.spec-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid #E4DFD3;
+  margin-top: 1.4rem;
+  flex-wrap: wrap;
+}
+.spec-tab {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-size: 0.86rem;
+  padding: 0.7rem 0.9rem;
+  color: #5A6772;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  white-space: nowrap;
+}
+.spec-tab[aria-selected="true"] { color: var(--ink); border-color: var(--buoy); font-weight: 600; }
+.spec-tab:hover { color: var(--ink); }
+.spec-panel { display: none; padding: 1.2rem 0; }
+.spec-panel.active { display: block; }
+.spec-panel .spec-table { margin: 0; }
+.spec-panel__empty { color: #5A6772; font-size: 0.88rem; }
+.doc-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.5rem; }
+.doc-list li a {
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  font-size: 0.9rem; color: var(--mistral); text-decoration: none;
+}
+.doc-list li a:hover { text-decoration: underline; }
+
+/* ---------- Assistant de dépôt de lot (multi-étapes) ---------- */
+.check-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 0.55rem 1rem;
+  margin: 0.6rem 0 1.3rem;
+}
+.check-grid label {
+  display: flex; align-items: center; gap: 0.45rem;
+  font-size: 0.88rem; cursor: pointer;
+}
+.check-grid input { accent-color: var(--buoy); width: 16px; height: 16px; }
+.wizard-nav { display: flex; justify-content: space-between; margin-top: 1.5rem; }
+.section-title { font-family: var(--font-display); font-size: 1.1rem; margin: 1.6rem 0 0.4rem; }
+.section-title:first-child { margin-top: 0; }
+.hint { font-size: 0.8rem; color: #5A6772; margin: -0.5rem 0 1rem; }
+
 .bid-panel {
   border: 1px solid #E4DFD3;
   border-radius: var(--radius);
