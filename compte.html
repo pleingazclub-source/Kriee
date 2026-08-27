@@ -54,6 +54,17 @@
 <main class="account-wrap" id="account-content" style="display:none;">
 
   <section class="account-section">
+    <h2>Mes favoris</h2>
+    <table class="account-table" id="my-favorites-table">
+      <thead>
+        <tr><th></th><th>Lot</th><th>Enchère actuelle</th><th>Statut</th><th></th></tr>
+      </thead>
+      <tbody id="my-favorites-rows"></tbody>
+    </table>
+    <p class="empty-state" id="my-favorites-empty" style="display:none;">Tu n'as encore ajouté aucun lot à tes favoris.</p>
+  </section>
+
+  <section class="account-section">
     <h2>Mes enchères</h2>
     <table class="account-table" id="my-bids-table">
       <thead>
@@ -88,8 +99,36 @@ async function init() {
     return;
   }
   document.getElementById('account-content').style.display = 'block';
+  loadMyFavorites(session.user.id);
   loadMyBids(session.user.id);
   loadMyLots(session.user.id);
+}
+
+async function loadMyFavorites(userId) {
+  const { data, error } = await supabaseClient
+    .from('favorites')
+    .select('lot_id, lots(id, title, current_price, status, cover_image_url, region)')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+
+  const rows = document.getElementById('my-favorites-rows');
+  if (error || !data || data.length === 0) {
+    document.getElementById('my-favorites-empty').style.display = 'block';
+    return;
+  }
+
+  rows.innerHTML = data.filter(f => f.lots).map(f => {
+    const l = f.lots;
+    return `
+    <tr>
+      <td>${l.cover_image_url ? `<img src="${l.cover_image_url}">` : ''}</td>
+      <td><strong>${l.title}</strong><br><span style="color:#5A6772; font-size:0.8rem;">${l.region}</span></td>
+      <td>${formatEUR(l.current_price)}</td>
+      <td><span class="status-pill status-pill--${statusPillClass(l)}" style="font-family:var(--font-data); font-size:0.7rem; padding:0.2rem 0.55rem; border-radius:999px; background:#F1EEE6; color:#5A6772;">${l.status}</span></td>
+      <td><a href="lot.html?id=${l.id}" class="btn btn--ghost btn--sm" style="padding:0.35rem 0.7rem; font-size:0.78rem; text-decoration:none;">Voir</a></td>
+    </tr>
+  `;
+  }).join('');
 }
 
 function statusPillClass(l) {
