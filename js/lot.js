@@ -15,6 +15,13 @@ const DEMO_LOT = {
   bid_increment: 200,
   ends_at: new Date(Date.now() + 1000 * 60 * 42).toISOString(),
   image: 'linear-gradient(135deg,#2C6E8E,#0E2233)',
+  specs: {
+    general: { 'Marque': 'CNSO', 'Type': 'Samouraï Mk2', 'Longueur': '7,6 m', 'Largeur': '2,5 m', 'Matériau': 'Polyester', 'Nombre de couchettes': '4', 'Année de construction': '1979' },
+    moteur: { 'Type de moteur': 'Hors-bord', 'Marque moteur': 'Yamaha', 'Puissance (ch)': '8', 'Carburant': 'Essence', 'Heures moteur': '340' },
+    navigation: { 'GPS': '✓', 'VHF': '✓', 'Compas': '✓', 'Loch/speedomètre': '✓' },
+    greement: { 'Nombre de mâts': '1', 'Matériau du mât': 'Aluminium', 'Nombre de voiles': '3', 'État des voiles': 'Bon', 'Grand-voile': '✓', 'Génois': '✓', 'Spi': '✓' },
+    documents: ['Acte de francisation', 'Dernier rapport de visite technique'],
+  },
   bids: [
     { amount: 8200, created_at: new Date(Date.now() - 1000 * 60 * 4).toISOString(), bidder: 'J.****' },
     { amount: 8000, created_at: new Date(Date.now() - 1000 * 60 * 12).toISOString(), bidder: 'M.****' },
@@ -86,6 +93,55 @@ function renderLot() {
 
   renderBreakdown(minBid);
   renderHistory();
+  renderSpecTabs(l.specs || {});
+}
+
+const SPEC_TAB_LABELS = {
+  general: 'Général',
+  moteur: 'Moteur & électricité',
+  navigation: 'Navigation & électronique',
+  greement: 'Gréement',
+  securite: 'Sécurité & équipement extérieur',
+  documents: 'Documents',
+};
+
+function renderSpecTabs(specs) {
+  const tabsEl = document.getElementById('spec-tabs');
+  const panelsEl = document.getElementById('spec-panels');
+  const keys = Object.keys(SPEC_TAB_LABELS).filter(k => specs[k] && (Array.isArray(specs[k]) ? specs[k].length : Object.keys(specs[k]).length));
+
+  if (keys.length === 0) {
+    tabsEl.innerHTML = '';
+    panelsEl.innerHTML = '';
+    return;
+  }
+
+  tabsEl.innerHTML = keys.map((k, i) => `
+    <button class="spec-tab" role="tab" data-tab="${k}" aria-selected="${i === 0}">${SPEC_TAB_LABELS[k]}</button>
+  `).join('');
+
+  panelsEl.innerHTML = keys.map((k, i) => `
+    <div class="spec-panel ${i === 0 ? 'active' : ''}" data-panel="${k}">
+      ${renderSpecPanelContent(k, specs[k])}
+    </div>
+  `).join('');
+
+  tabsEl.querySelectorAll('.spec-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      tabsEl.querySelectorAll('.spec-tab').forEach(t => t.setAttribute('aria-selected', 'false'));
+      tab.setAttribute('aria-selected', 'true');
+      panelsEl.querySelectorAll('.spec-panel').forEach(p => p.classList.remove('active'));
+      panelsEl.querySelector(`[data-panel="${tab.dataset.tab}"]`).classList.add('active');
+    });
+  });
+}
+
+function renderSpecPanelContent(key, value) {
+  if (key === 'documents') {
+    return `<ul class="doc-list">${value.map(doc => `<li>📄 ${doc}</li>`).join('')}</ul>`;
+  }
+  const rows = Object.entries(value).map(([label, val]) => `<tr><td>${label}</td><td>${val}</td></tr>`).join('');
+  return `<table class="spec-table">${rows}</table>`;
 }
 
 function renderBreakdown(amount) {
