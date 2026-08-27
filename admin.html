@@ -25,6 +25,26 @@
   .btn--danger { background: transparent; border: 1px solid var(--buoy); color: var(--buoy); border-radius: var(--radius); }
   .btn--danger:hover { background: var(--buoy); color: var(--foam); }
   .gate { max-width: 480px; margin: 4rem auto; padding: 2rem; text-align: center; }
+
+  .reserve-badge { font-family: var(--font-data); font-size: 0.7rem; padding: 0.2rem 0.5rem; border-radius: 999px; white-space: nowrap; }
+  .reserve-badge--met { background: #DCEFE3; color: #1D6B3E; }
+  .reserve-badge--not { background: #F1EEE6; color: #5A6772; }
+  .reserve-cell { font-size: 0.82rem; }
+  .reserve-cell__gap { color: #5A6772; font-size: 0.74rem; display: block; }
+
+  .revenue-dash {
+    background: var(--ink); color: var(--foam);
+    border-radius: var(--radius); padding: 1.8rem 2rem; margin-bottom: 2rem;
+    position: relative; overflow: hidden;
+  }
+  .revenue-dash__title { font-family: var(--font-display); font-size: 1.15rem; margin: 0 0 1.4rem; position: relative; }
+  .revenue-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1.5rem; position: relative; }
+  .revenue-grid__item { border-left: 2px solid var(--brass); padding-left: 0.9rem; }
+  .revenue-grid__num { font-family: var(--font-data); font-size: 1.5rem; font-weight: 600; display: block; color: var(--foam); }
+  .revenue-grid__label { font-size: 0.74rem; color: #AAB8C2; text-transform: uppercase; letter-spacing: 0.04em; }
+  .revenue-potential { margin-top: 1.4rem; padding-top: 1.2rem; border-top: 1px solid #24384A; position: relative; }
+  .revenue-potential__num { font-family: var(--font-data); font-size: 1.8rem; font-weight: 600; color: var(--brass); }
+  .revenue-potential__label { font-size: 0.82rem; color: #C9D3D9; }
 </style>
 </head>
 <body>
@@ -55,6 +75,33 @@
 </div>
 
 <main class="admin-wrap" id="admin-content" style="display:none;">
+
+  <div class="revenue-dash">
+    <p class="revenue-dash__title">Revenu plateforme (frais de vente 18% HT, hors TVA)</p>
+    <div class="revenue-grid">
+      <div class="revenue-grid__item">
+        <span class="revenue-grid__num" id="rev-today">0 €</span>
+        <span class="revenue-grid__label">Aujourd'hui</span>
+      </div>
+      <div class="revenue-grid__item">
+        <span class="revenue-grid__num" id="rev-month">0 €</span>
+        <span class="revenue-grid__label">Ce mois</span>
+      </div>
+      <div class="revenue-grid__item">
+        <span class="revenue-grid__num" id="rev-year">0 €</span>
+        <span class="revenue-grid__label">Cette année</span>
+      </div>
+      <div class="revenue-grid__item">
+        <span class="revenue-grid__num" id="rev-total">0 €</span>
+        <span class="revenue-grid__label">Total réalisé (lots vendus)</span>
+      </div>
+    </div>
+    <div class="revenue-potential">
+      <span class="revenue-potential__num" id="rev-potential">0 €</span>
+      <span class="revenue-potential__label"> de revenu potentiel sur les enchères en cours dont la réserve est déjà atteinte — encore susceptible d'augmenter avant clôture</span>
+    </div>
+  </div>
+
   <div class="admin-filters" role="group">
     <button class="chip" data-filter="draft" aria-pressed="true">En attente</button>
     <button class="chip" data-filter="live">En ligne</button>
@@ -63,6 +110,11 @@
     <button class="chip" data-filter="cancelled">Refusés</button>
     <button class="chip" data-filter="all">Tous</button>
   </div>
+  <div class="admin-filters" role="group" aria-label="Filtrer par statut de réserve">
+    <button class="chip" data-reserve-filter="all" aria-pressed="true">Toutes réserves</button>
+    <button class="chip" data-reserve-filter="met">Réserve atteinte</button>
+    <button class="chip" data-reserve-filter="not">Réserve non atteinte</button>
+  </div>
 
   <table class="admin-table">
     <thead>
@@ -70,7 +122,7 @@
         <th></th>
         <th>Lot</th>
         <th>Vendeur</th>
-        <th>Prix départ</th>
+        <th>Enchère / Réserve</th>
         <th>Statut</th>
         <th>Actions</th>
       </tr>
@@ -86,6 +138,7 @@
 <script>
 let allLots = [];
 let activeFilter = 'draft';
+let activeReserveFilter = 'all';
 
 async function init() {
   const { data: { session } } = await supabaseClient.auth.getSession();
@@ -119,18 +172,55 @@ async function loadLots() {
   render();
 }
 
+function isReserveMet(l) { return l.current_price >= l.reserve_price; }
+function buyerFeeHT(l) { return l.current_price * 0.18; }
+
+function renderRevenueDashboard() {
+  const now = new Date();
+  const sold = allLots.filter(l => l.status === 'sold');
+  const potential = allLots.filter(l => l.status === 'live' && isReserveMet(l));
+
+  const sumIf = (predicate) => sold.filter(predicate).reduce((sum, l) => sum + buyerFeeHT(l), 0);
+
+  const isSameDay = (d) => d.toDateString() === now.toDateString();
+  const isSameMonth = (d) => d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  const isSameYear = (d) => d.getFullYear() === now.getFullYear();
+
+  const todayTotal = sumIf(l => isSameDay(new Date(l.ends_at)));
+  const monthTotal = sumIf(l => isSameMonth(new Date(l.ends_at)));
+  const yearTotal = sumIf(l => isSameYear(new Date(l.ends_at)));
+  const grandTotal = sold.reduce((sum, l) => sum + buyerFeeHT(l), 0);
+  const potentialTotal = potential.reduce((sum, l) => sum + buyerFeeHT(l), 0);
+
+  document.getElementById('rev-today').textContent = formatEUR(todayTotal);
+  document.getElementById('rev-month').textContent = formatEUR(monthTotal);
+  document.getElementById('rev-year').textContent = formatEUR(yearTotal);
+  document.getElementById('rev-total').textContent = formatEUR(grandTotal);
+  document.getElementById('rev-potential').textContent = formatEUR(potentialTotal);
+}
+
 function render() {
+  renderRevenueDashboard();
+
   const rows = document.getElementById('admin-rows');
-  const filtered = activeFilter === 'all' ? allLots : allLots.filter(l => l.status === activeFilter);
+  let filtered = activeFilter === 'all' ? allLots : allLots.filter(l => l.status === activeFilter);
+  if (activeReserveFilter === 'met') filtered = filtered.filter(isReserveMet);
+  if (activeReserveFilter === 'not') filtered = filtered.filter(l => !isReserveMet(l));
 
   document.getElementById('admin-empty').style.display = filtered.length ? 'none' : 'block';
 
-  rows.innerHTML = filtered.map(l => `
+  rows.innerHTML = filtered.map(l => {
+    const met = isReserveMet(l);
+    const gap = l.reserve_price - l.current_price;
+    return `
     <tr>
       <td>${l.cover_image_url ? `<img src="${l.cover_image_url}">` : ''}</td>
       <td><strong>${l.title}</strong><br><span style="color:#5A6772; font-size:0.8rem;">${l.categories?.label || ''} — ${l.region}</span></td>
       <td>${l.profiles?.full_name || '—'}</td>
-      <td>${formatEUR(l.starting_price)}</td>
+      <td class="reserve-cell">
+        ${formatEUR(l.current_price)} <span class="reserve-badge ${met ? 'reserve-badge--met' : 'reserve-badge--not'}">${met ? '✓ Réserve atteinte' : 'Réserve non atteinte'}</span>
+        <span class="reserve-cell__gap">Réserve : ${formatEUR(l.reserve_price)}${met ? '' : ` (manque ${formatEUR(gap)})`}</span>
+      </td>
       <td><span class="status-pill status-pill--${l.status === 'scheduled' ? 'draft' : l.status}">${l.status}</span></td>
       <td class="admin-actions">
         ${l.status === 'draft' ? `<button class="btn btn--primary btn--sm" data-action="publish" data-id="${l.id}">Publier</button>` : ''}
@@ -139,7 +229,8 @@ function render() {
         <a href="lot.html?id=${l.id}" class="btn btn--ghost btn--sm" style="text-decoration:none;">Voir</a>
       </td>
     </tr>
-  `).join('');
+  `;
+  }).join('');
 
   rows.querySelectorAll('button[data-action]').forEach(btn => {
     btn.addEventListener('click', () => handleAction(btn.dataset.action, btn.dataset.id));
@@ -156,11 +247,19 @@ async function handleAction(action, id) {
   if (error) alert('Erreur : ' + error.message);
 }
 
-document.querySelectorAll('.chip').forEach(chip => {
+document.querySelectorAll('.chip[data-filter]').forEach(chip => {
   chip.addEventListener('click', () => {
-    document.querySelectorAll('.chip').forEach(c => c.setAttribute('aria-pressed', 'false'));
+    document.querySelectorAll('.chip[data-filter]').forEach(c => c.setAttribute('aria-pressed', 'false'));
     chip.setAttribute('aria-pressed', 'true');
     activeFilter = chip.dataset.filter;
+    render();
+  });
+});
+document.querySelectorAll('.chip[data-reserve-filter]').forEach(chip => {
+  chip.addEventListener('click', () => {
+    document.querySelectorAll('.chip[data-reserve-filter]').forEach(c => c.setAttribute('aria-pressed', 'false'));
+    chip.setAttribute('aria-pressed', 'true');
+    activeReserveFilter = chip.dataset.reserveFilter;
     render();
   });
 });
