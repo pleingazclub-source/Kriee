@@ -94,7 +94,7 @@ a { color: inherit; }
   gap: 0.6rem;
 }
 .brand__mark { flex-shrink: 0; }
-.brand__word { display: flex; align-items: baseline; gap: 0.5rem; }
+.brand__word { display: inline; }
 .brand__sub {
   font-family: var(--font-data);
   font-size: 0.65rem;
