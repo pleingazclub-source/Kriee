@@ -53,7 +53,7 @@ async function loadLot() {
 
   const { data: bids } = await supabaseClient
     .from('bids')
-    .select('amount, created_at, is_auto_bid, profiles(full_name)')
+    .select('amount, created_at, is_auto_bid, profiles(pseudo)')
     .eq('lot_id', lotId)
     .order('amount', { ascending: false })
     .limit(20);
@@ -62,7 +62,7 @@ async function loadLot() {
     ...lot,
     category_flag: lot.categories?.flag_code || '·',
     category_slug: lot.categories?.slug || 'equipement',
-    bids: (bids || []).map(b => ({ amount: b.amount, created_at: b.created_at, is_auto_bid: b.is_auto_bid, bidder: b.profiles?.full_name || 'Enchérisseur' })),
+    bids: (bids || []).map(b => ({ amount: b.amount, created_at: b.created_at, is_auto_bid: b.is_auto_bid, bidder: b.profiles?.pseudo || 'Enchérisseur anonyme' })),
   };
   renderLot();
 
@@ -107,6 +107,11 @@ function renderLot() {
   renderBreakdown(minBid);
   renderHistory();
   renderSpecTabs(l.specs || {});
+
+  supabaseClient.auth.getSession().then(({ data: { session } }) => {
+    if (!session) return;
+    if (!checkOwnLot(session.user.id)) checkProfileComplete(session.user.id);
+  });
 }
 
 function renderGallery(l) {
@@ -360,14 +365,21 @@ setInterval(() => {
 let isFavorited = false;
 let viewCounted = false;
 
+function checkOwnLot(userId) {
+  if (!currentLot || currentLot.seller_id !== userId) return false;
+  document.getElementById('bid-form-wrap').style.display = 'none';
+  document.getElementById('own-lot-note').style.display = 'block';
+  return true;
+}
+
 async function checkProfileComplete(userId) {
-  const { data } = await supabaseClient.from('profiles').select('full_name, phone, city').eq('id', userId).single();
-  const complete = data && data.full_name && data.phone && data.city;
+  const { data } = await supabaseClient.from('profiles').select('full_name, phone, city, pseudo').eq('id', userId).single();
+  const complete = data && data.full_name && data.phone && data.city && data.pseudo;
   if (!complete) {
     const btn = document.getElementById('bid-form').querySelector('button[type="submit"]');
     document.getElementById('bid-amount').disabled = true;
     btn.disabled = true;
-    document.getElementById('bid-feedback').innerHTML = '⚠️ <a href="compte.html" style="color:var(--buoy);">Complète ton profil</a> (nom, téléphone, ville) avant de pouvoir enchérir.';
+    document.getElementById('bid-feedback').innerHTML = '⚠️ <a href="compte.html" style="color:var(--buoy);">Complète ton profil</a> (nom, pseudo, téléphone, ville) avant de pouvoir enchérir.';
     document.getElementById('bid-feedback').style.color = 'var(--buoy)';
   }
 }
@@ -397,8 +409,6 @@ async function initFavoriteAndViews() {
       .maybeSingle();
     isFavorited = !!data;
     updateFavoriteUI();
-
-    checkProfileComplete(session.user.id);
   }
 }
 
