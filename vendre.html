@@ -20,6 +20,10 @@
   .field textarea { min-height: 90px; }
   .field-row { display: flex; gap: 1rem; flex-wrap: wrap; }
   .field-row .field { flex: 1; min-width: 160px; }
+  .media-preview { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.6rem; }
+  .media-preview img { width: 70px; height: 70px; object-fit: cover; border-radius: 3px; border: 1px solid #C9C2B2; }
+  .media-preview video { max-width: 160px; border-radius: 3px; border: 1px solid #C9C2B2; }
+  .upload-status { font-size: 0.8rem; color: var(--mistral); margin-top: 0.4rem; }
 </style>
 </head>
 <body>
@@ -235,8 +239,14 @@
         <textarea id="documents" placeholder="Acte de francisation&#10;Dernier rapport de visite technique"></textarea>
       </div>
       <div class="field">
-        <label for="cover-image">Lien vers une photo de couverture (facultatif pour l'instant)</label>
-        <input type="url" id="cover-image" placeholder="https://...">
+        <label for="photos">Photos (la première sera la photo de couverture)</label>
+        <input type="file" id="photos" accept="image/*" multiple>
+        <div id="photos-preview" class="media-preview"></div>
+      </div>
+      <div class="field">
+        <label for="video">Vidéo de présentation (facultative, 1 fichier)</label>
+        <input type="file" id="video" accept="video/*">
+        <div id="video-preview" class="media-preview"></div>
       </div>
     </section>
 
@@ -352,7 +362,7 @@ const CHECK_GROUPS = ['nav-checks', 'greement-checks', 'securite-checks'];
 function saveDraft() {
   const fields = {};
   document.querySelectorAll('#sell-form input[id], #sell-form select[id], #sell-form textarea[id]').forEach(el => {
-    if (el.type === 'checkbox') return;
+    if (el.type === 'checkbox' || el.type === 'file') return;
     fields[el.id] = el.value;
   });
   const checks = {};
@@ -368,7 +378,7 @@ function restoreDraft() {
     const draft = JSON.parse(raw);
     Object.entries(draft.fields || {}).forEach(([id, val]) => {
       const el = document.getElementById(id);
-      if (el) el.value = val;
+      if (el && el.type !== 'file') el.value = val;
     });
     CHECK_GROUPS.forEach(id => {
       const values = (draft.checks || {})[id] || [];
@@ -405,10 +415,33 @@ document.getElementById('new-lot-btn').addEventListener('click', () => {
   document.querySelector('.wizard-progress-row').style.display = 'flex';
   document.getElementById('draft-status').textContent = '';
   document.getElementById('sell-feedback').textContent = '';
+  document.getElementById('photos-preview').innerHTML = '';
+  document.getElementById('video-preview').innerHTML = '';
   stepIndex = 0;
   syncRequiredFields();
   showStep();
   window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+
+// ---------- Aperçu local des photos/vidéo (pas d'upload avant l'envoi du formulaire) ----------
+document.getElementById('photos').addEventListener('change', (e) => {
+  const preview = document.getElementById('photos-preview');
+  preview.innerHTML = '';
+  Array.from(e.target.files).forEach(file => {
+    const img = document.createElement('img');
+    img.src = URL.createObjectURL(file);
+    preview.appendChild(img);
+  });
+});
+document.getElementById('video').addEventListener('change', (e) => {
+  const preview = document.getElementById('video-preview');
+  preview.innerHTML = '';
+  if (e.target.files[0]) {
+    const video = document.createElement('video');
+    video.src = URL.createObjectURL(e.target.files[0]);
+    video.controls = true;
+    preview.appendChild(video);
+  }
 });
 
 restoreDraft();
@@ -495,6 +528,29 @@ document.getElementById('sell-form').addEventListener('submit', async (e) => {
     specs.securite = checksToObject('securite-checks');
   }
 
+  // Upload des photos/vidéo avant l'insertion — le lot n'est créé qu'une fois les fichiers en ligne
+  const photoFiles = Array.from(document.getElementById('photos').files);
+  const videoFile = document.getElementById('video').files[0];
+  let imageUrls = [];
+  let videoUrl = null;
+
+  if (photoFiles.length || videoFile) {
+    feedback.textContent = `Envoi des fichiers (0/${photoFiles.length + (videoFile ? 1 : 0)})...`;
+    feedback.style.color = 'var(--mistral)';
+  }
+  let uploaded = 0;
+  const totalFiles = photoFiles.length + (videoFile ? 1 : 0);
+  for (const file of photoFiles) {
+    imageUrls.push(await uploadLotMedia(file, session.user.id));
+    uploaded++;
+    if (totalFiles) feedback.textContent = `Envoi des fichiers (${uploaded}/${totalFiles})...`;
+  }
+  if (videoFile) {
+    videoUrl = await uploadLotMedia(videoFile, session.user.id);
+    uploaded++;
+    feedback.textContent = `Envoi des fichiers (${uploaded}/${totalFiles})...`;
+  }
+
   const { error } = await supabaseClient.from('lots').insert({
     seller_id: session.user.id,
     category_id: cat.id,
@@ -506,7 +562,9 @@ document.getElementById('sell-form').addEventListener('submit', async (e) => {
     current_price: Number(document.getElementById('starting').value),
     reserve_price: Number(document.getElementById('reserve').value),
     bid_increment: Number(document.getElementById('increment').value),
-    cover_image_url: document.getElementById('cover-image').value || null,
+    cover_image_url: imageUrls[0] || null,
+    images: imageUrls,
+    video_url: videoUrl,
     specs,
     status: 'draft',
     starts_at: new Date().toISOString(),
