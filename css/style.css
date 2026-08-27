@@ -189,6 +189,40 @@ a { color: inherit; }
 }
 .hero__actions { display: flex; gap: 1rem; flex-wrap: wrap; }
 
+/* ---------- Bandeau de page (identité navy réutilisée sur toutes les pages secondaires) ---------- */
+.page-band {
+  background: var(--ink);
+  color: var(--foam);
+  padding: 2.2rem 2rem;
+  position: relative;
+  overflow: hidden;
+}
+.page-band__eyebrow {
+  font-family: var(--font-data);
+  color: var(--brass);
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin: 0 0 0.5rem;
+  position: relative;
+}
+.page-band__title {
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 3vw, 2.1rem);
+  font-weight: 600;
+  margin: 0;
+  position: relative;
+}
+.page-band--slim { padding: 1.1rem 2rem; }
+.page-band__back {
+  font-family: var(--font-data);
+  font-size: 0.8rem;
+  color: var(--chalk);
+  text-decoration: none;
+  position: relative;
+}
+.page-band__back:hover { color: var(--brass); }
+
 /* ---------- Bandeau modèle économique ---------- */
 .fee-strip {
   display: flex;
@@ -357,8 +391,10 @@ a { color: inherit; }
 }
 .check-grid input { accent-color: var(--buoy); width: 16px; height: 16px; }
 .wizard-nav { display: flex; justify-content: space-between; margin-top: 1.5rem; }
-.wizard-progress { height: 3px; background: #E4DFD3; margin-bottom: 1.6rem; overflow: hidden; }
+.wizard-progress-row { display: flex; align-items: center; gap: 0.8rem; margin-bottom: 1.6rem; }
+.wizard-progress { flex: 1; height: 3px; background: #E4DFD3; overflow: hidden; }
 .wizard-progress__bar { height: 100%; background: var(--buoy); transition: width 0.3s ease; }
+.wizard-progress__pct { font-family: var(--font-data); font-size: 0.78rem; color: var(--buoy); font-weight: 600; min-width: 2.4em; text-align: right; }
 .section-title { font-family: var(--font-display); font-size: 1.1rem; margin: 1.6rem 0 0.4rem; }
 .section-title:first-child { margin-top: 0; }
 .hint { font-size: 0.8rem; color: #5A6772; margin: -0.5rem 0 1rem; }
