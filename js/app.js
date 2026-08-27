@@ -177,6 +177,9 @@ function renderGrid() {
     return new Date(a.ends_at) - new Date(b.ends_at); // ending-soon (défaut)
   });
 
+  const countEl = document.getElementById('results-count');
+  if (countEl) countEl.textContent = `${filtered.length} lot${filtered.length > 1 ? 's' : ''}`;
+
   if (filtered.length === 0) {
     grid.innerHTML = `<p style="grid-column:1/-1; color:#5A6772;">Aucun lot ne correspond à ta recherche.</p>`;
     return;
@@ -235,6 +238,25 @@ if (regionSelect) {
 const proximityBtn = document.getElementById('proximity-btn');
 if (proximityBtn) {
   proximityBtn.addEventListener('click', () => requestGeolocation());
+}
+
+const resetBtn = document.getElementById('reset-filters');
+if (resetBtn) {
+  resetBtn.addEventListener('click', () => {
+    activeFilter = 'all';
+    activeRegion = 'all';
+    searchQuery = '';
+    sortBy = 'ending-soon';
+    userCoords = null;
+    document.getElementById('search-input').value = '';
+    document.getElementById('region-select').value = 'all';
+    document.getElementById('sort-select').value = 'ending-soon';
+    document.querySelectorAll('.chip').forEach(c => c.setAttribute('aria-pressed', 'false'));
+    document.querySelector('.chip[data-filter="all"]').setAttribute('aria-pressed', 'true');
+    const status = document.getElementById('proximity-status');
+    if (status) status.textContent = '';
+    renderGrid();
+  });
 }
 
 function requestGeolocation() {
