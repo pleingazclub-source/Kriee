@@ -47,6 +47,7 @@ async function initAuthNav() {
       emailEl.textContent = session.user.email;
       adminLink.style.display = (profile && profile.is_admin) ? 'block' : 'none';
     } else {
+      navLogin.href = 'connexion.html';
       navLogin.style.display = 'inline-block';
       userMenu.style.display = 'none';
       dropdown.classList.remove('open');
