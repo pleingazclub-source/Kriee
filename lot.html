@@ -33,17 +33,13 @@
 
 <main class="lot-detail" id="lot-detail">
   <section>
-    <div class="lot-detail__media" id="lot-media"></div>
+    <div class="lot-detail__media" id="lot-media">
+      <button type="button" id="favorite-btn" class="photo-heart" aria-pressed="false" title="Ajouter aux favoris">♡</button>
+      <span id="view-count" class="photo-views">👁 0</span>
+    </div>
     <div class="lot-thumbs" id="lot-thumbs"></div>
     <div id="lot-video-wrap"></div>
-    <div class="lot-detail__title-row">
-      <h1 id="lot-title">Chargement du lot…</h1>
-      <div class="lot-detail__stats">
-        <button type="button" id="favorite-btn" class="favorite-btn" aria-pressed="false" title="Ajouter aux favoris">♡</button>
-        <span id="favorite-count" class="view-count">♥ 0</span>
-        <span id="view-count" class="view-count">👁 0</span>
-      </div>
-    </div>
+    <h1 id="lot-title">Chargement du lot…</h1>
     <p id="lot-region" style="color:#5A6772;"></p>
     <table class="spec-table" id="lot-specs"></table>
 
