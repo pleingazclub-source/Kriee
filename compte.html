@@ -339,6 +339,9 @@ async function loadMyLots(userId) {
         saleActionHTML = `<div style="font-size:0.78rem; color:#5A6772; margin-top:0.4rem;">En attente de l'acheteur.</div>`;
       }
     }
+    const relistButtonHTML = l.status === 'unsold'
+      ? `<button type="button" class="btn btn--ghost btn--sm" data-relist-id="${l.id}" style="margin-top:0.4rem; padding:0.35rem 0.7rem; font-size:0.78rem;">Remettre en vente</button>`
+      : '';
     return `
     <tr>
       <td>${l.cover_image_url ? `<img src="${l.cover_image_url}">` : ''}</td>
@@ -348,6 +351,7 @@ async function loadMyLots(userId) {
           <strong>${l.status === 'deleted' ? 'Motif de suppression' : 'Motif de refus'} :</strong> ${l.moderation_note}
         </div>` : ''}
         ${saleActionHTML}
+        ${relistButtonHTML}
         <div id="contact-${sale?.id}"></div>
       </td>
       <td>${formatEUR(l.starting_price)}</td>
@@ -466,6 +470,16 @@ function saleCardHTML(s, role) {
 }
 
 function wireSaleActions() {
+  document.querySelectorAll('button[data-relist-id]').forEach(btn => {
+    btn.onclick = async () => {
+      btn.disabled = true;
+      const { error } = await supabaseClient.rpc('relist_lot', { p_lot_id: btn.dataset.relistId });
+      if (error) { alert('Erreur : ' + error.message); btn.disabled = false; return; }
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      loadMyLots(session.user.id);
+    };
+  });
+
   document.querySelectorAll('button[data-sale-action]').forEach(btn => {
     btn.onclick = async () => {
       const { action, saleId } = btn.dataset;
