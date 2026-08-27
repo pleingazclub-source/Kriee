@@ -228,6 +228,7 @@ a { color: inherit; }
   position: relative;
   overflow: hidden;
 }
+.page-band__inner { max-width: 1100px; margin: 0 auto; position: relative; }
 .page-band__eyebrow {
   font-family: var(--font-data);
   color: var(--brass);
