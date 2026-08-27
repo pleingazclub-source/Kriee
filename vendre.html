@@ -24,6 +24,15 @@
   .media-preview img { width: 70px; height: 70px; object-fit: cover; border-radius: 3px; border: 1px solid #C9C2B2; }
   .media-preview video { max-width: 160px; border-radius: 3px; border: 1px solid #C9C2B2; }
   .upload-status { font-size: 0.8rem; color: var(--mistral); margin-top: 0.4rem; }
+  .photo-list { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.8rem; }
+  .photo-item { display: flex; align-items: center; gap: 0.7rem; border: 1px solid #E4DFD3; border-radius: 3px; padding: 0.5rem 0.7rem; background: var(--foam); }
+  .photo-item img { width: 56px; height: 56px; object-fit: cover; border-radius: 3px; flex-shrink: 0; }
+  .photo-item__badge { font-family: var(--font-data); font-size: 0.65rem; background: var(--brass); color: var(--ink); padding: 0.15rem 0.5rem; border-radius: 999px; white-space: nowrap; }
+  .photo-item__actions { display: flex; gap: 0.35rem; margin-left: auto; }
+  .photo-item__actions button { background: none; border: 1px solid #C9C2B2; border-radius: 3px; width: 30px; height: 30px; cursor: pointer; font-size: 0.9rem; color: var(--ink); }
+  .photo-item__actions button:hover { background: var(--chalk); }
+  .photo-item__actions button.danger { border-color: var(--buoy); color: var(--buoy); }
+  .photo-item__actions button.danger:hover { background: var(--buoy); color: var(--foam); }
 </style>
 </head>
 <body>
@@ -239,9 +248,10 @@
         <textarea id="documents" placeholder="Acte de francisation&#10;Dernier rapport de visite technique"></textarea>
       </div>
       <div class="field">
-        <label for="photos">Photos (la première sera la photo de couverture)</label>
+        <label for="photos">Photos</label>
         <input type="file" id="photos" accept="image/*" multiple>
-        <div id="photos-preview" class="media-preview"></div>
+        <p class="hint" style="margin:0.4rem 0 0;">Ajoute une ou plusieurs photos, puis choisis la couverture et l'ordre d'affichage ci-dessous.</p>
+        <div id="photos-list" class="photo-list"></div>
       </div>
       <div class="field">
         <label for="video">Vidéo de présentation (facultative, 1 fichier)</label>
@@ -415,7 +425,8 @@ document.getElementById('new-lot-btn').addEventListener('click', () => {
   document.querySelector('.wizard-progress-row').style.display = 'flex';
   document.getElementById('draft-status').textContent = '';
   document.getElementById('sell-feedback').textContent = '';
-  document.getElementById('photos-preview').innerHTML = '';
+  selectedPhotos = [];
+  document.getElementById('photos-list').innerHTML = '';
   document.getElementById('video-preview').innerHTML = '';
   stepIndex = 0;
   syncRequiredFields();
@@ -423,16 +434,49 @@ document.getElementById('new-lot-btn').addEventListener('click', () => {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 });
 
-// ---------- Aperçu local des photos/vidéo (pas d'upload avant l'envoi du formulaire) ----------
-document.getElementById('photos').addEventListener('change', (e) => {
-  const preview = document.getElementById('photos-preview');
-  preview.innerHTML = '';
-  Array.from(e.target.files).forEach(file => {
-    const img = document.createElement('img');
-    img.src = URL.createObjectURL(file);
-    preview.appendChild(img);
+// ---------- Gestion des photos : ajout, couverture, ordre, suppression ----------
+let selectedPhotos = [];
+
+function renderPhotoList() {
+  const list = document.getElementById('photos-list');
+  list.innerHTML = selectedPhotos.map((file, i) => `
+    <div class="photo-item">
+      <img src="${URL.createObjectURL(file)}">
+      ${i === 0 ? '<span class="photo-item__badge">Couverture</span>' : ''}
+      <div class="photo-item__actions">
+        ${i !== 0 ? `<button type="button" data-action="cover" data-idx="${i}" title="Définir comme couverture">★</button>` : ''}
+        ${i > 0 ? `<button type="button" data-action="up" data-idx="${i}" title="Monter">↑</button>` : ''}
+        ${i < selectedPhotos.length - 1 ? `<button type="button" data-action="down" data-idx="${i}" title="Descendre">↓</button>` : ''}
+        <button type="button" class="danger" data-action="remove" data-idx="${i}" title="Retirer">✕</button>
+      </div>
+    </div>
+  `).join('');
+
+  list.querySelectorAll('button[data-action]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = Number(btn.dataset.idx);
+      const action = btn.dataset.action;
+      if (action === 'cover') {
+        const [item] = selectedPhotos.splice(idx, 1);
+        selectedPhotos.unshift(item);
+      } else if (action === 'up') {
+        [selectedPhotos[idx - 1], selectedPhotos[idx]] = [selectedPhotos[idx], selectedPhotos[idx - 1]];
+      } else if (action === 'down') {
+        [selectedPhotos[idx + 1], selectedPhotos[idx]] = [selectedPhotos[idx], selectedPhotos[idx + 1]];
+      } else if (action === 'remove') {
+        selectedPhotos.splice(idx, 1);
+      }
+      renderPhotoList();
+    });
   });
+}
+
+document.getElementById('photos').addEventListener('change', (e) => {
+  selectedPhotos.push(...Array.from(e.target.files));
+  e.target.value = ''; // vidé pour permettre d'ajouter d'autres photos ensuite sans remplacer les précédentes
+  renderPhotoList();
 });
+
 document.getElementById('video').addEventListener('change', (e) => {
   const preview = document.getElementById('video-preview');
   preview.innerHTML = '';
@@ -529,7 +573,7 @@ document.getElementById('sell-form').addEventListener('submit', async (e) => {
   }
 
   // Upload des photos/vidéo avant l'insertion — le lot n'est créé qu'une fois les fichiers en ligne
-  const photoFiles = Array.from(document.getElementById('photos').files);
+  const photoFiles = selectedPhotos;
   const videoFile = document.getElementById('video').files[0];
   let imageUrls = [];
   let videoUrl = null;
@@ -576,6 +620,9 @@ document.getElementById('sell-form').addEventListener('submit', async (e) => {
     feedback.style.color = 'var(--buoy)';
   } else {
     localStorage.removeItem(DRAFT_KEY);
+    selectedPhotos = [];
+    document.getElementById('photos-list').innerHTML = '';
+    document.getElementById('video-preview').innerHTML = '';
     document.getElementById('step5-form-content').style.display = 'none';
     document.getElementById('step5-success').style.display = 'block';
     document.getElementById('wizard-nav').style.display = 'none';
