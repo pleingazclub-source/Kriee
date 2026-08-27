@@ -86,7 +86,7 @@ function renderGrid() {
 
   grid.innerHTML = filtered.map(l => `
     <a class="lot-card" href="lot.html?id=${l.id}">
-      <div class="lot-card__media" style="background:${l.image}">
+      <div class="lot-card__media" style="background-image:${l.image}">
         <span class="lot-card__flag">${l.category_flag}</span>
         <span class="lot-card__timer" data-ends="${l.ends_at}">${formatCountdown(l.ends_at)}</span>
       </div>
