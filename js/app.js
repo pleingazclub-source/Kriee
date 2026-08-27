@@ -31,6 +31,7 @@ let activeRegion = 'all';
 let searchQuery = '';
 let sortBy = 'ending-soon';
 let userCoords = null; // { lat, lng } une fois la géolocalisation acceptée
+let myFavoriteIds = new Set();
 let lots = [];
 
 // Coordonnées approximatives par région — faute de géocoder chaque port individuellement pour l'instant.
@@ -59,7 +60,17 @@ function distanceForLot(l) {
   return haversineKm(userCoords, coords);
 }
 
+async function loadMyFavoriteIds() {
+  const isConfigured = !SUPABASE_URL.includes('TON-PROJET');
+  if (!isConfigured) return;
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (!session) { myFavoriteIds = new Set(); return; }
+  const { data } = await supabaseClient.from('favorites').select('lot_id').eq('user_id', session.user.id);
+  myFavoriteIds = new Set((data || []).map(f => f.lot_id));
+}
+
 async function loadLots() {
+  await loadMyFavoriteIds();
   const isConfigured = !SUPABASE_URL.includes('TON-PROJET');
   if (!isConfigured) {
     lots = DEMO_LOTS;
@@ -116,11 +127,12 @@ function renderTicker() {
 
 function lotCardHTML(l, opts = {}) {
   const dist = opts.showDistance ? distanceForLot(l) : null;
+  const isFav = myFavoriteIds.has(l.id);
   return `
     <a class="lot-card" href="lot.html?id=${l.id}">
       <div class="lot-card__media" style="background-image:${l.image}">
         <span class="lot-card__flag">${l.category_flag}</span>
-        <span class="lot-card__stats">👁 ${l.view_count ?? 0} · ♥ ${l.favorite_count ?? 0}</span>
+        <button type="button" class="card-heart ${isFav ? 'card-heart--active' : ''}" data-lot-id="${l.id}" title="Ajouter aux favoris">${isFav ? '♥' : '♡'}</button>
         <span class="lot-card__timer" data-ends="${l.ends_at}">${formatCountdown(l.ends_at)}</span>
       </div>
       <div class="lot-card__body">
@@ -253,5 +265,33 @@ setInterval(() => {
   });
   if (document.getElementById('ticker-track')) renderTicker();
 }, 1000);
+
+// Cœur de favori sur les vignettes — clic géré par délégation (les cartes sont regénérées à chaque rendu)
+async function handleCardHeartClick(e) {
+  const btn = e.target.closest('.card-heart');
+  if (!btn) return;
+  e.preventDefault();
+  e.stopPropagation();
+
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (!session) { location.href = 'connexion.html'; return; }
+
+  const lotId = btn.dataset.lotId;
+  const isFav = myFavoriteIds.has(lotId);
+
+  btn.disabled = true;
+  const { error } = isFav
+    ? await supabaseClient.from('favorites').delete().eq('user_id', session.user.id).eq('lot_id', lotId)
+    : await supabaseClient.from('favorites').insert({ user_id: session.user.id, lot_id: lotId });
+  btn.disabled = false;
+
+  if (error) { alert('Erreur : ' + error.message); return; }
+
+  if (isFav) { myFavoriteIds.delete(lotId); btn.classList.remove('card-heart--active'); btn.textContent = '♡'; }
+  else { myFavoriteIds.add(lotId); btn.classList.add('card-heart--active'); btn.textContent = '♥'; }
+}
+
+document.getElementById('lots')?.addEventListener('click', handleCardHeartClick);
+document.getElementById('trending-grid')?.addEventListener('click', handleCardHeartClick);
 
 loadLots();

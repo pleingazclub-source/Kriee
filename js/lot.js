@@ -74,7 +74,6 @@ function renderLot() {
   const l = currentLot;
   document.getElementById('page-title').textContent = `${l.title} — Kriee`;
   document.getElementById('view-count').textContent = `👁 ${l.view_count ?? 0}`;
-  document.getElementById('favorite-count').textContent = `♥ ${l.favorite_count ?? 0}`;
   renderGallery(l);
   document.getElementById('lot-title').textContent = l.title;
   document.getElementById('lot-region').textContent = l.region;
@@ -350,7 +349,14 @@ async function initFavoriteAndViews() {
 
   if (!viewCounted) {
     viewCounted = true;
-    supabaseClient.rpc('increment_view_count', { p_lot_id: lotId }).then(() => {}); // best-effort, jamais bloquant
+    supabaseClient.rpc('increment_view_count', { p_lot_id: lotId }).then(async ({ error }) => {
+      if (error) { console.error('increment_view_count a échoué :', error); return; }
+      const { data } = await supabaseClient.from('lots').select('view_count').eq('id', lotId).single();
+      if (data) {
+        document.getElementById('view-count').textContent = `👁 ${data.view_count}`;
+        if (currentLot) currentLot.view_count = data.view_count;
+      }
+    });
   }
 
   const { data: { session } } = await supabaseClient.auth.getSession();
@@ -377,18 +383,27 @@ document.getElementById('favorite-btn').addEventListener('click', async () => {
   const { data: { session } } = await supabaseClient.auth.getSession();
   if (!session) { location.href = 'connexion.html'; return; }
 
-  const countEl = document.getElementById('favorite-count');
-  const currentCount = parseInt(countEl.textContent.replace('♥', '').trim(), 10) || 0;
+  const btn = document.getElementById('favorite-btn');
+  btn.disabled = true;
 
+  let mutationError = null;
   if (isFavorited) {
-    await supabaseClient.from('favorites').delete().eq('user_id', session.user.id).eq('lot_id', lotId);
-    isFavorited = false;
-    countEl.textContent = `♥ ${Math.max(currentCount - 1, 0)}`; // mise à jour immédiate, en attendant la confirmation temps réel
+    const { error } = await supabaseClient.from('favorites').delete().eq('user_id', session.user.id).eq('lot_id', lotId);
+    mutationError = error;
+    if (!error) isFavorited = false;
   } else {
-    await supabaseClient.from('favorites').insert({ user_id: session.user.id, lot_id: lotId });
-    isFavorited = true;
-    countEl.textContent = `♥ ${currentCount + 1}`;
+    const { error } = await supabaseClient.from('favorites').insert({ user_id: session.user.id, lot_id: lotId });
+    mutationError = error;
+    if (!error) isFavorited = true;
   }
+
+  btn.disabled = false;
+
+  if (mutationError) {
+    alert('Erreur lors de la mise à jour du favori : ' + mutationError.message);
+    return;
+  }
+
   updateFavoriteUI();
 });
 
