@@ -215,7 +215,12 @@ async function loadLots() {
     .from('lots')
     .select('*, categories(label), profiles(full_name)')
     .order('created_at', { ascending: false });
-  if (error) { console.error(error); return; }
+  if (error) {
+    console.error(error);
+    document.getElementById('admin-empty').style.display = 'block';
+    document.getElementById('admin-empty').textContent = 'Erreur de chargement : ' + error.message;
+    return;
+  }
   allLots = data;
   render();
 }
