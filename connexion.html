@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Se connecter — Kriee</title>
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .auth-wrap { max-width: 420px; margin: 0 auto; padding: 3.5rem 2rem; }
+  .auth-wrap h1 { font-family: var(--font-display); font-size: 1.7rem; margin-bottom: 0.3rem; }
+  .auth-wrap p.lead { color: #5A6772; font-size: 0.92rem; margin-bottom: 1.8rem; }
+  .tabs { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; border-bottom: 1px solid #E4DFD3; }
+  .tab {
+    background: none; border: none; cursor: pointer; font-family: var(--font-body);
+    font-size: 0.9rem; padding: 0.6rem 0.2rem; margin-right: 1.2rem;
+    color: #5A6772; border-bottom: 2px solid transparent;
+  }
+  .tab[aria-selected="true"] { color: var(--ink); border-color: var(--buoy); font-weight: 600; }
+  .field { margin-bottom: 1.1rem; }
+  .field label { display: block; font-size: 0.85rem; margin-bottom: 0.35rem; color: #5A6772; }
+  .field input {
+    width: 100%; padding: 0.65rem; border: 1px solid #C9C2B2; border-radius: 3px;
+    font-family: var(--font-body); font-size: 0.95rem;
+  }
+  .panel { display: none; }
+  .panel.active { display: block; }
+  .link-btn {
+    background: none; border: none; color: var(--mistral); text-decoration: underline;
+    cursor: pointer; font-size: 0.85rem; font-family: var(--font-body); padding: 0;
+  }
+  #auth-feedback { font-size: 0.85rem; margin-top: 1rem; min-height: 1.2em; }
+  .already-in { text-align: center; padding: 2rem 0; }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <a href="index.html" class="brand">Kri<span style="color:var(--buoy)">ee</span>
+    <span class="brand__sub">SUD DE LA FRANCE</span>
+  </a>
+  <nav class="site-nav">
+    <a href="index.html">Enchères en cours</a>
+    <a href="vendre.html">Vendre un bateau</a>
+    <a href="#" class="btn btn--ghost" id="nav-login">Se connecter</a>
+  </nav>
+</header>
+
+<main class="auth-wrap">
+
+  <div id="already-connected" class="already-in" style="display:none;">
+    <p>Tu es déjà connecté en tant que <strong id="already-email"></strong>.</p>
+    <a href="index.html" class="btn btn--primary">Retour aux enchères</a>
+    <br><br>
+    <button class="link-btn" id="logout-btn">Se déconnecter</button>
+  </div>
+
+  <div id="auth-forms">
+    <h1>Se connecter</h1>
+    <p class="lead">Nécessaire pour enchérir ou déposer un lot.</p>
+
+    <div class="tabs" role="tablist">
+      <button class="tab" id="tab-magic" role="tab" aria-selected="true">Lien magique</button>
+      <button class="tab" id="tab-password" role="tab" aria-selected="false">Email + mot de passe</button>
+    </div>
+
+    <!-- Lien magique : pas de mot de passe, un email suffit -->
+    <div class="panel active" id="panel-magic">
+      <form id="magic-form">
+        <div class="field">
+          <label for="magic-email">Adresse email</label>
+          <input type="email" id="magic-email" required placeholder="toi@exemple.fr">
+        </div>
+        <button type="submit" class="btn btn--primary" style="width:100%; padding:0.75rem;">Recevoir le lien de connexion</button>
+      </form>
+    </div>
+
+    <!-- Email + mot de passe : pratique pour les comptes créés manuellement dans Supabase -->
+    <div class="panel" id="panel-password">
+      <form id="password-form">
+        <div class="field">
+          <label for="pw-email">Adresse email</label>
+          <input type="email" id="pw-email" required placeholder="toi@exemple.fr">
+        </div>
+        <div class="field">
+          <label for="pw-password">Mot de passe</label>
+          <input type="password" id="pw-password" required minlength="6">
+        </div>
+        <button type="submit" class="btn btn--primary" style="width:100%; padding:0.75rem;">Se connecter</button>
+      </form>
+      <p style="margin-top:0.8rem; font-size:0.85rem;">
+        Pas de compte ? <button class="link-btn" id="signup-btn">Créer un compte avec ce mot de passe</button>
+      </p>
+    </div>
+
+    <p id="auth-feedback" role="status"></p>
+  </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase-client.js"></script>
+<script>
+const feedback = document.getElementById('auth-feedback');
+
+function setFeedback(msg, isError) {
+  feedback.textContent = msg;
+  feedback.style.color = isError ? 'var(--buoy)' : 'var(--mistral)';
+}
+
+// Affiche l'état "déjà connecté" si une session existe
+(async () => {
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (session) {
+    document.getElementById('auth-forms').style.display = 'none';
+    document.getElementById('already-connected').style.display = 'block';
+    document.getElementById('already-email').textContent = session.user.email;
+  }
+})();
+
+document.getElementById('logout-btn').addEventListener('click', async () => {
+  await supabaseClient.auth.signOut();
+  location.reload();
+});
+
+// Bascule entre les deux onglets
+const tabMagic = document.getElementById('tab-magic');
+const tabPassword = document.getElementById('tab-password');
+const panelMagic = document.getElementById('panel-magic');
+const panelPassword = document.getElementById('panel-password');
+
+tabMagic.addEventListener('click', () => {
+  tabMagic.setAttribute('aria-selected', 'true');
+  tabPassword.setAttribute('aria-selected', 'false');
+  panelMagic.classList.add('active');
+  panelPassword.classList.remove('active');
+  setFeedback('', false);
+});
+tabPassword.addEventListener('click', () => {
+  tabPassword.setAttribute('aria-selected', 'true');
+  tabMagic.setAttribute('aria-selected', 'false');
+  panelPassword.classList.add('active');
+  panelMagic.classList.remove('active');
+  setFeedback('', false);
+});
+
+// Lien magique
+document.getElementById('magic-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const email = document.getElementById('magic-email').value;
+  setFeedback('Envoi en cours…', false);
+  const { error } = await supabaseClient.auth.signInWithOtp({
+    email,
+    options: { emailRedirectTo: location.origin + location.pathname.replace('connexion.html', 'index.html') }
+  });
+  if (error) setFeedback(error.message, true);
+  else setFeedback('Email envoyé. Clique sur le lien reçu pour te connecter.', false);
+});
+
+// Email + mot de passe
+document.getElementById('password-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const email = document.getElementById('pw-email').value;
+  const password = document.getElementById('pw-password').value;
+  setFeedback('Connexion…', false);
+  const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+  if (error) setFeedback(error.message, true);
+  else location.href = 'index.html';
+});
+
+// Créer un compte avec email + mot de passe (self-service)
+document.getElementById('signup-btn').addEventListener('click', async () => {
+  const email = document.getElementById('pw-email').value;
+  const password = document.getElementById('pw-password').value;
+  if (!email || !password || password.length < 6) {
+    setFeedback('Renseigne un email et un mot de passe (6 caractères min.) avant de créer le compte.', true);
+    return;
+  }
+  setFeedback('Création du compte…', false);
+  const { error } = await supabaseClient.auth.signUp({ email, password });
+  if (error) setFeedback(error.message, true);
+  else setFeedback('Compte créé. Vérifie ta boîte mail si une confirmation est requise, sinon connecte-toi directement.', false);
+});
+</script>
+</body>
+</html>
