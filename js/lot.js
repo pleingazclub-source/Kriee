@@ -360,6 +360,18 @@ setInterval(() => {
 let isFavorited = false;
 let viewCounted = false;
 
+async function checkProfileComplete(userId) {
+  const { data } = await supabaseClient.from('profiles').select('full_name, phone, city').eq('id', userId).single();
+  const complete = data && data.full_name && data.phone && data.city;
+  if (!complete) {
+    const btn = document.getElementById('bid-form').querySelector('button[type="submit"]');
+    document.getElementById('bid-amount').disabled = true;
+    btn.disabled = true;
+    document.getElementById('bid-feedback').innerHTML = '⚠️ <a href="compte.html" style="color:var(--buoy);">Complète ton profil</a> (nom, téléphone, ville) avant de pouvoir enchérir.';
+    document.getElementById('bid-feedback').style.color = 'var(--buoy)';
+  }
+}
+
 async function initFavoriteAndViews() {
   if (lotId.startsWith('demo')) return; // pas de compteurs réels en mode démo
 
@@ -385,6 +397,8 @@ async function initFavoriteAndViews() {
       .maybeSingle();
     isFavorited = !!data;
     updateFavoriteUI();
+
+    checkProfileComplete(session.user.id);
   }
 }
 
