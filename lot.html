@@ -53,6 +53,7 @@
     <div class="bid-panel__current">
       <div class="bid-panel__current-label">Enchère actuelle</div>
       <div class="bid-panel__current-amount" id="bid-current">— €</div>
+      <div class="bid-panel__reserve-note">Sous réserve de l'approbation du vendeur</div>
     </div>
 
     <form class="bid-form" id="bid-form">
@@ -65,7 +66,14 @@
     <div class="price-breakdown" id="price-breakdown"></div>
 
     <div class="bid-history" id="bid-history"></div>
+    <div class="adjuge-banner" id="adjuge-banner">
+      <span class="adjuge-banner__hammer">🔨</span>
+      <span class="adjuge-banner__text">Adjugé !</span>
+      <span class="adjuge-banner__sub">Sous réserve de l'approbation du vendeur</span>
+    </div>
   </aside>
+
+  <div class="flash-overlay" id="flash-overlay"></div>
 </main>
 
 <footer class="site-footer">
