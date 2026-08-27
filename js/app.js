@@ -3,27 +3,61 @@ const DEMO_LOTS = [
   {
     id: 'demo-1', title: 'Voilier CNSO Samouraï Mk2 — 1979', category_flag: 'V', category_slug: 'voile',
     region: 'Var — Saint-Mandrier-sur-Mer', current_price: 8200, bid_increment: 200,
-    ends_at: new Date(Date.now() + 1000 * 60 * 42).toISOString(), image: 'linear-gradient(135deg,#2C6E8E,#0E2233)'
+    ends_at: new Date(Date.now() + 1000 * 60 * 42).toISOString(), image: 'linear-gradient(135deg,#2C6E8E,#0E2233)',
+    view_count: 748, favorite_count: 34,
   },
   {
     id: 'demo-2', title: 'Semi-rigide 5,20m + moteur Yamaha 60cv', category_flag: 'S', category_slug: 'semi-rigide',
     region: 'Bouches-du-Rhône — La Ciotat', current_price: 4100, bid_increment: 100,
-    ends_at: new Date(Date.now() + 1000 * 60 * 60 * 5).toISOString(), image: 'linear-gradient(135deg,#B8935A,#0E2233)'
+    ends_at: new Date(Date.now() + 1000 * 60 * 60 * 5).toISOString(), image: 'linear-gradient(135deg,#B8935A,#0E2233)',
+    view_count: 312, favorite_count: 12,
   },
   {
     id: 'demo-3', title: 'Winchs Harken + jeu de voiles First 30', category_flag: 'E', category_slug: 'equipement',
     region: 'Hérault — Sète', current_price: 650, bid_increment: 25,
-    ends_at: new Date(Date.now() + 1000 * 60 * 60 * 22).toISOString(), image: 'linear-gradient(135deg,#C7401F,#0E2233)'
+    ends_at: new Date(Date.now() + 1000 * 60 * 60 * 22).toISOString(), image: 'linear-gradient(135deg,#C7401F,#0E2233)',
+    view_count: 156, favorite_count: 5,
   },
   {
     id: 'demo-4', title: 'Vedette Bénéteau Antares 6 — moteur inboard révisé', category_flag: 'M', category_slug: 'moteur',
     region: 'Var — Toulon', current_price: 15600, bid_increment: 300,
-    ends_at: new Date(Date.now() + 1000 * 60 * 60 * 3).toISOString(), image: 'linear-gradient(135deg,#2C6E8E,#0E2233)'
+    ends_at: new Date(Date.now() + 1000 * 60 * 60 * 3).toISOString(), image: 'linear-gradient(135deg,#2C6E8E,#0E2233)',
+    view_count: 521, favorite_count: 28,
   },
 ];
 
 let activeFilter = 'all';
+let activeRegion = 'all';
+let searchQuery = '';
+let sortBy = 'ending-soon';
+let userCoords = null; // { lat, lng } une fois la géolocalisation acceptée
 let lots = [];
+
+// Coordonnées approximatives par région — faute de géocoder chaque port individuellement pour l'instant.
+// Précision suffisante pour classer "proche / loin" à l'échelle du Sud de la France, pas pour une distance exacte.
+const REGION_COORDS = {
+  PACA: { lat: 43.55, lng: 6.5 },
+  Occitanie: { lat: 43.6, lng: 3.9 },
+  Corse: { lat: 42.05, lng: 9.1 },
+};
+
+function haversineKm(a, b) {
+  const R = 6371;
+  const dLat = (b.lat - a.lat) * Math.PI / 180;
+  const dLng = (b.lng - a.lng) * Math.PI / 180;
+  const lat1 = a.lat * Math.PI / 180;
+  const lat2 = b.lat * Math.PI / 180;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+
+function distanceForLot(l) {
+  if (!userCoords) return null;
+  if (l.lat != null && l.lng != null) return haversineKm(userCoords, { lat: l.lat, lng: l.lng });
+  const coords = REGION_COORDS[l.region];
+  if (!coords) return null;
+  return haversineKm(userCoords, coords);
+}
 
 async function loadLots() {
   const isConfigured = !SUPABASE_URL.includes('TON-PROJET');
@@ -53,6 +87,10 @@ async function loadLots() {
       bid_increment: l.bid_increment,
       ends_at: l.ends_at,
       image: l.cover_image_url ? `url(${l.cover_image_url})` : 'linear-gradient(135deg,#2C6E8E,#0E2233)',
+      lat: l.lat,
+      lng: l.lng,
+      view_count: l.view_count ?? 0,
+      favorite_count: l.favorite_count ?? 0,
     }));
   }
   render();
@@ -64,8 +102,9 @@ async function loadLots() {
 }
 
 function render() {
-  renderTicker();
-  renderGrid();
+  if (document.getElementById('ticker-track')) renderTicker();
+  if (document.getElementById('lots')) renderGrid();
+  if (document.getElementById('trending-grid')) renderTrending();
 }
 
 function renderTicker() {
@@ -75,24 +114,18 @@ function renderTicker() {
   track.innerHTML = items.join('') + items.join(''); // dupliqué pour boucle continue
 }
 
-function renderGrid() {
-  const grid = document.getElementById('lots');
-  const filtered = activeFilter === 'all' ? lots : lots.filter(l => l.category_slug === activeFilter);
-
-  if (filtered.length === 0) {
-    grid.innerHTML = `<p style="grid-column:1/-1; color:#5A6772;">Aucun lot dans cette catégorie pour l'instant.</p>`;
-    return;
-  }
-
-  grid.innerHTML = filtered.map(l => `
+function lotCardHTML(l, opts = {}) {
+  const dist = opts.showDistance ? distanceForLot(l) : null;
+  return `
     <a class="lot-card" href="lot.html?id=${l.id}">
       <div class="lot-card__media" style="background-image:${l.image}">
         <span class="lot-card__flag">${l.category_flag}</span>
+        <span class="lot-card__stats">👁 ${l.view_count ?? 0} · ♥ ${l.favorite_count ?? 0}</span>
         <span class="lot-card__timer" data-ends="${l.ends_at}">${formatCountdown(l.ends_at)}</span>
       </div>
       <div class="lot-card__body">
         <h3 class="lot-card__title">${l.title}</h3>
-        <p class="lot-card__meta">${l.region}</p>
+        <p class="lot-card__meta">${l.region}${dist !== null ? `<span class="lot-card__distance">≈ ${Math.round(dist)} km</span>` : ''}</p>
         <div class="lot-card__price-row">
           <span>
             <span class="lot-card__price-label">Enchère actuelle</span><br>
@@ -102,10 +135,56 @@ function renderGrid() {
         </div>
       </div>
     </a>
-  `).join('');
+  `;
 }
 
-// Filtres
+function renderGrid() {
+  const grid = document.getElementById('lots');
+  let filtered = activeFilter === 'all' ? lots : lots.filter(l => l.category_slug === activeFilter);
+
+  if (activeRegion !== 'all') {
+    filtered = filtered.filter(l => l.region === activeRegion);
+  }
+
+  if (searchQuery.trim()) {
+    const q = searchQuery.trim().toLowerCase();
+    filtered = filtered.filter(l =>
+      l.title.toLowerCase().includes(q) || l.region.toLowerCase().includes(q)
+    );
+  }
+
+  filtered = [...filtered].sort((a, b) => {
+    if (sortBy === 'price-asc') return a.current_price - b.current_price;
+    if (sortBy === 'price-desc') return b.current_price - a.current_price;
+    if (sortBy === 'proximity' && userCoords) {
+      const da = distanceForLot(a), db = distanceForLot(b);
+      if (da === null) return 1;
+      if (db === null) return -1;
+      return da - db;
+    }
+    return new Date(a.ends_at) - new Date(b.ends_at); // ending-soon (défaut)
+  });
+
+  if (filtered.length === 0) {
+    grid.innerHTML = `<p style="grid-column:1/-1; color:#5A6772;">Aucun lot ne correspond à ta recherche.</p>`;
+    return;
+  }
+
+  grid.innerHTML = filtered.map(l => lotCardHTML(l, { showDistance: sortBy === 'proximity' })).join('');
+}
+
+function renderTrending() {
+  const grid = document.getElementById('trending-grid');
+  if (!grid) return;
+  const top = [...lots]
+    .sort((a, b) => ((b.view_count ?? 0) + (b.favorite_count ?? 0) * 3) - ((a.view_count ?? 0) + (a.favorite_count ?? 0) * 3))
+    .slice(0, 3);
+  grid.innerHTML = top.length
+    ? top.map(l => lotCardHTML(l)).join('')
+    : `<p style="grid-column:1/-1; color:#5A6772;">Pas encore assez de données pour afficher les tendances.</p>`;
+}
+
+// Filtres univers
 document.querySelectorAll('.chip').forEach(chip => {
   chip.addEventListener('click', () => {
     document.querySelectorAll('.chip').forEach(c => c.setAttribute('aria-pressed', 'false'));
@@ -115,12 +194,64 @@ document.querySelectorAll('.chip').forEach(chip => {
   });
 });
 
+// Recherche texte + tri (uniquement présents sur la page de recherche)
+const searchInput = document.getElementById('search-input');
+if (searchInput) {
+  searchInput.addEventListener('input', (e) => {
+    searchQuery = e.target.value;
+    renderGrid();
+  });
+}
+
+const sortSelect = document.getElementById('sort-select');
+if (sortSelect) {
+  sortSelect.addEventListener('change', (e) => {
+    sortBy = e.target.value;
+    if (sortBy === 'proximity' && !userCoords) requestGeolocation();
+    else renderGrid();
+  });
+}
+
+const regionSelect = document.getElementById('region-select');
+if (regionSelect) {
+  regionSelect.addEventListener('change', (e) => {
+    activeRegion = e.target.value;
+    renderGrid();
+  });
+}
+
+const proximityBtn = document.getElementById('proximity-btn');
+if (proximityBtn) {
+  proximityBtn.addEventListener('click', () => requestGeolocation());
+}
+
+function requestGeolocation() {
+  const status = document.getElementById('proximity-status');
+  if (!navigator.geolocation) {
+    if (status) status.textContent = 'Géolocalisation non disponible sur ce navigateur.';
+    return;
+  }
+  if (status) status.textContent = 'Localisation en cours...';
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      userCoords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      sortBy = 'proximity';
+      if (sortSelect) sortSelect.value = 'proximity';
+      if (status) status.textContent = 'Triée par proximité (précis quand le lot a une adresse géocodée, approximatif sinon).';
+      renderGrid();
+    },
+    () => {
+      if (status) status.textContent = 'Localisation refusée ou indisponible.';
+    }
+  );
+}
+
 // Rafraîchit les compteurs chaque seconde sans recharger les données
 setInterval(() => {
   document.querySelectorAll('[data-ends]').forEach(el => {
     el.textContent = formatCountdown(el.dataset.ends);
   });
-  renderTicker();
+  if (document.getElementById('ticker-track')) renderTicker();
 }, 1000);
 
 loadLots();

@@ -11,6 +11,7 @@ const DEMO_LOT = {
   length_m: 7.6,
   engine_hours: null,
   category_flag: 'V',
+  category_slug: 'voile',
   current_price: 8200,
   bid_increment: 200,
   ends_at: new Date(Date.now() + 1000 * 60 * 42).toISOString(),
@@ -42,7 +43,7 @@ async function loadLot() {
 
   const { data: lot, error } = await supabaseClient
     .from('lots_with_buyer_price')
-    .select('*, categories(flag_code)')
+    .select('*, categories(flag_code, slug)')
     .eq('id', lotId)
     .single();
 
@@ -58,6 +59,7 @@ async function loadLot() {
   currentLot = {
     ...lot,
     category_flag: lot.categories?.flag_code || '·',
+    category_slug: lot.categories?.slug || 'equipement',
     bids: (bids || []).map(b => ({ amount: b.amount, created_at: b.created_at, bidder: b.profiles?.full_name || 'Enchérisseur' })),
   };
   renderLot();
@@ -71,6 +73,7 @@ async function loadLot() {
 function renderLot() {
   const l = currentLot;
   document.getElementById('page-title').textContent = `${l.title} — Kriee`;
+  document.getElementById('view-count').textContent = `👁 ${l.view_count ?? 0}`;
   renderGallery(l);
   document.getElementById('lot-title').textContent = l.title;
   document.getElementById('lot-region').textContent = l.region;
@@ -90,6 +93,8 @@ function renderLot() {
   document.getElementById('bid-amount').min = minBid;
   document.getElementById('bid-amount').value = minBid;
   document.getElementById('bid-min-hint').textContent = `Minimum : ${formatEUR(minBid)}`;
+
+  document.getElementById('one-boat-note').style.display = l.category_slug !== 'equipement' ? 'block' : 'none';
 
   renderBreakdown(minBid);
   renderHistory();
@@ -334,5 +339,53 @@ setInterval(() => {
     tickClosingSequence();
   }
 }, 1000);
+
+// ---------- Favoris & compteur de vues ----------
+let isFavorited = false;
+let viewCounted = false;
+
+async function initFavoriteAndViews() {
+  if (lotId.startsWith('demo')) return; // pas de compteurs réels en mode démo
+
+  if (!viewCounted) {
+    viewCounted = true;
+    supabaseClient.rpc('increment_view_count', { p_lot_id: lotId }).then(() => {}); // best-effort, jamais bloquant
+  }
+
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (session) {
+    const { data } = await supabaseClient
+      .from('favorites')
+      .select('lot_id')
+      .eq('user_id', session.user.id)
+      .eq('lot_id', lotId)
+      .maybeSingle();
+    isFavorited = !!data;
+    updateFavoriteUI();
+  }
+}
+
+function updateFavoriteUI() {
+  const btn = document.getElementById('favorite-btn');
+  btn.textContent = isFavorited ? '♥' : '♡';
+  btn.setAttribute('aria-pressed', String(isFavorited));
+  btn.classList.toggle('favorite-btn--active', isFavorited);
+}
+
+document.getElementById('favorite-btn').addEventListener('click', async () => {
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (!session) { location.href = 'connexion.html'; return; }
+
+  if (isFavorited) {
+    await supabaseClient.from('favorites').delete().eq('user_id', session.user.id).eq('lot_id', lotId);
+    isFavorited = false;
+  } else {
+    await supabaseClient.from('favorites').insert({ user_id: session.user.id, lot_id: lotId });
+    isFavorited = true;
+  }
+  updateFavoriteUI();
+});
+
+initFavoriteAndViews();
 
 loadLot();

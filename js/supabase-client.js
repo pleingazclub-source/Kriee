@@ -43,3 +43,20 @@ async function uploadLotMedia(file, userId) {
   const { data } = supabaseClient.storage.from('lot-media').getPublicUrl(path);
   return data.publicUrl;
 }
+
+// Géocodage best-effort d'une adresse texte via Nominatim (OpenStreetMap, gratuit, aucune clé API requise).
+// Volontairement non bloquant : délai plafonné à 3s, ne lève jamais d'erreur — retourne simplement null en cas d'échec.
+// Pour un usage à plus gros volume, envisager un géocodeur payant (Google Maps, Mapbox) avec mise en cache côté serveur.
+async function geocodeAddress(query) {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 3000);
+    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query)}`, { signal: controller.signal });
+    clearTimeout(timeout);
+    const data = await res.json();
+    if (data && data[0]) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+    return null;
+  } catch (err) {
+    return null; // timeout, réseau indisponible, réponse invalide... jamais bloquant pour l'appelant
+  }
+}
