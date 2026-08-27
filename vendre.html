@@ -69,6 +69,10 @@
     <span class="wizard-progress__pct" id="wizard-progress-pct">20%</span>
   </div>
 
+  <p id="profile-incomplete-banner" style="display:none; background:#F6DCD8; border-left:3px solid var(--buoy); padding:0.9rem 1.1rem; border-radius:3px; font-size:0.88rem; margin-bottom:1.5rem;">
+    ⚠️ <a href="compte.html" style="color:var(--buoy); font-weight:600;">Complète ton profil</a> (nom, téléphone, ville) avant de pouvoir soumettre un lot — le formulaire reste accessible pour préparer ton annonce, mais l'envoi sera refusé tant que ça n'est pas fait.
+  </p>
+
   <form id="sell-form">
 
     <!-- ÉTAPE 1 : type de lot + infos de base -->
@@ -654,6 +658,15 @@ async function initEditMode() {
 
 if (!editLotId) restoreDraft();
 initEditMode();
+checkProfileCompleteForSelling();
+
+async function checkProfileCompleteForSelling() {
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (!session) return; // le check final de session/connexion se fait déjà à la soumission
+  const { data } = await supabaseClient.from('profiles').select('full_name, phone, city').eq('id', session.user.id).single();
+  const complete = data && data.full_name && data.phone && data.city;
+  if (!complete) document.getElementById('profile-incomplete-banner').style.display = 'block';
+}
 
 document.getElementById('sell-form').addEventListener('submit', async (e) => {
   e.preventDefault();
