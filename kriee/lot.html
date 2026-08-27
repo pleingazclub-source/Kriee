@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title id="page-title">Lot — Kriee</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <a href="index.html" class="brand">
+    <svg class="brand__mark" width="24" height="26" viewBox="0 0 24 26" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <line x1="5" y1="1" x2="5" y2="25" stroke="#0E2233" stroke-width="2"/>
+      <path d="M5 3 L21 8.5 L5 14 Z" fill="#C7401F"/>
+    </svg>
+    <span class="brand__word">Kri<span style="color:var(--buoy)">ee</span></span>
+    <span class="brand__sub">SUD DE LA FRANCE</span>
+  </a>
+  <nav class="site-nav">
+    <a href="encheres.html">Enchères en cours</a>
+    <a href="vendre.html">Vendre un bateau</a>
+    <a href="#" class="btn btn--ghost" id="nav-login">Se connecter</a>
+  </nav>
+</header>
+
+<div class="page-band page-band--slim">
+  <a href="index.html" class="page-band__back">← Retour aux enchères</a>
+</div>
+
+<main class="lot-detail" id="lot-detail">
+  <section>
+    <div class="lot-detail__media" id="lot-media"></div>
+    <div class="lot-thumbs" id="lot-thumbs"></div>
+    <div id="lot-video-wrap"></div>
+    <h1 id="lot-title">Chargement du lot…</h1>
+    <p id="lot-region" style="color:#5A6772;"></p>
+    <table class="spec-table" id="lot-specs"></table>
+
+    <div class="spec-tabs" role="tablist" id="spec-tabs"></div>
+    <div id="spec-panels"></div>
+    <div>
+      <h3 style="font-family:var(--font-display); font-weight:500;">Description</h3>
+      <p id="lot-description"></p>
+    </div>
+  </section>
+
+  <aside class="bid-panel">
+    <div class="bid-panel__timer" id="bid-timer">--:--:--</div>
+    <div class="bid-panel__current">
+      <div class="bid-panel__current-label">Enchère actuelle</div>
+      <div class="bid-panel__current-amount" id="bid-current">— €</div>
+      <div class="bid-panel__reserve-note">Sous réserve de l'approbation du vendeur</div>
+      <div class="bid-panel__reserve-note" id="one-boat-note" style="display:none;">Tu ne peux être en tête que sur un seul bateau à la fois — l'accastillage reste libre</div>
+    </div>
+
+    <form class="bid-form" id="bid-form">
+      <input type="number" id="bid-amount" step="1" required aria-label="Montant de votre enchère">
+      <button type="submit" class="btn btn--primary">Enchérir</button>
+    </form>
+    <p id="bid-min-hint" style="font-size:0.78rem; color:#5A6772; margin-top:-0.6rem;"></p>
+    <p id="bid-feedback" style="font-size:0.85rem;" role="status"></p>
+
+    <div class="price-breakdown" id="price-breakdown"></div>
+
+    <div class="bid-history" id="bid-history"></div>
+    <div class="adjuge-banner" id="adjuge-banner">
+      <span class="adjuge-banner__hammer">🔨</span>
+      <span class="adjuge-banner__text">Adjugé !</span>
+      <span class="adjuge-banner__sub">Sous réserve de l'approbation du vendeur</span>
+    </div>
+  </aside>
+
+  <div class="flash-overlay" id="flash-overlay"></div>
+</main>
+
+<footer class="site-footer">
+  <strong>Kriee</strong> — le vendeur ne paie aucun frais. L'acheteur règle le prix marteau + 18% de frais de vente + TVA (21%) sur ces frais.
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase-client.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/lot.js"></script>
+</body>
+</html>

@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vendre un bateau ou du matériel — Kriee</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .sell-wrap { max-width: 720px; margin: 0 auto; padding: 2.5rem 2rem 4rem; }
+  .sell-wrap h1 { font-family: var(--font-display); font-size: 1.8rem; margin-bottom: 0.2rem; }
+  .sell-wrap > p.lead { color: #5A6772; font-size: 0.92rem; margin-bottom: 1.6rem; }
+  .field { margin-bottom: 1.1rem; }
+  .field label { display: block; font-size: 0.85rem; margin-bottom: 0.35rem; color: #5A6772; }
+  .field input, .field select, .field textarea {
+    width: 100%; padding: 0.65rem; border: 1px solid #C9C2B2; border-radius: 3px; font-family: var(--font-body); font-size: 0.95rem;
+  }
+  .field textarea { min-height: 90px; }
+  .field-row { display: flex; gap: 1rem; flex-wrap: wrap; }
+  .field-row .field { flex: 1; min-width: 160px; }
+  .media-preview { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.6rem; }
+  .media-preview img { width: 70px; height: 70px; object-fit: cover; border-radius: 3px; border: 1px solid #C9C2B2; }
+  .media-preview video { max-width: 160px; border-radius: 3px; border: 1px solid #C9C2B2; }
+  .upload-status { font-size: 0.8rem; color: var(--mistral); margin-top: 0.4rem; }
+  .photo-list { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.8rem; }
+  .photo-item { display: flex; align-items: center; gap: 0.7rem; border: 1px solid #E4DFD3; border-radius: 3px; padding: 0.5rem 0.7rem; background: var(--foam); }
+  .photo-item img { width: 56px; height: 56px; object-fit: cover; border-radius: 3px; flex-shrink: 0; }
+  .photo-item__badge { font-family: var(--font-data); font-size: 0.65rem; background: var(--brass); color: var(--ink); padding: 0.15rem 0.5rem; border-radius: 999px; white-space: nowrap; }
+  .photo-item__actions { display: flex; gap: 0.35rem; margin-left: auto; }
+  .photo-item__actions button { background: none; border: 1px solid #C9C2B2; border-radius: 3px; width: 30px; height: 30px; cursor: pointer; font-size: 0.9rem; color: var(--ink); }
+  .photo-item__actions button:hover { background: var(--chalk); }
+  .photo-item__actions button.danger { border-color: var(--buoy); color: var(--buoy); }
+  .photo-item__actions button.danger:hover { background: var(--buoy); color: var(--foam); }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <a href="index.html" class="brand">
+    <svg class="brand__mark" width="24" height="26" viewBox="0 0 24 26" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <line x1="5" y1="1" x2="5" y2="25" stroke="#0E2233" stroke-width="2"/>
+      <path d="M5 3 L21 8.5 L5 14 Z" fill="#C7401F"/>
+    </svg>
+    <span class="brand__word">Kri<span style="color:var(--buoy)">ee</span></span>
+    <span class="brand__sub">SUD DE LA FRANCE</span>
+  </a>
+  <nav class="site-nav">
+    <a href="encheres.html">Enchères en cours</a>
+    <a href="vendre.html">Vendre un bateau</a>
+    <a href="#" class="btn btn--ghost" id="nav-login">Se connecter</a>
+  </nav>
+</header>
+
+<div class="page-band">
+  <p class="page-band__eyebrow">Dépôt d'un lot — Kriee</p>
+  <h1 class="page-band__title">Mettre un lot en vente</h1>
+</div>
+
+<main class="sell-wrap">
+  <p class="lead">0% de frais vendeur — vous êtes payé au prix marteau. Le lot passe en modération avant sa mise en ligne.</p>
+  <p id="draft-status" style="font-size:0.78rem; color:#5A6772; margin-top:-1rem;"></p>
+  <button type="button" id="clear-draft" class="link-btn" style="display:none; background:none; border:none; color:var(--mistral); text-decoration:underline; cursor:pointer; font-size:0.78rem; padding:0; margin-top:-0.8rem; margin-bottom:1rem;">Effacer le brouillon et recommencer</button>
+
+  <div class="spec-tabs" role="tablist" id="wizard-tabs"></div>
+  <div class="wizard-progress-row">
+    <div class="wizard-progress"><div class="wizard-progress__bar" id="wizard-progress-bar"></div></div>
+    <span class="wizard-progress__pct" id="wizard-progress-pct">20%</span>
+  </div>
+
+  <form id="sell-form">
+
+    <!-- ÉTAPE 1 : type de lot + infos de base -->
+    <section class="spec-panel active" data-step="1">
+      <div class="field">
+        <label for="category">Que voulez-vous vendre ?</label>
+        <select id="category" required>
+          <option value="voile">Voilier</option>
+          <option value="moteur">Bateau à moteur</option>
+          <option value="semi-rigide">Semi-rigide</option>
+          <option value="equipement">Équipement / accastillage (pas un bateau entier)</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="title">Titre du lot</label>
+        <input type="text" id="title" required placeholder="Ex. Voilier Bénéteau First 30 — 1998">
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label for="region">Région</label>
+          <select id="region" required>
+            <option>PACA</option>
+            <option>Occitanie</option>
+            <option>Corse</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="port">Port / lieu de visite</label>
+          <input type="text" id="port" required placeholder="Ex. Saint-Mandrier-sur-Mer">
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label for="starting">Prix de départ (€)</label>
+          <input type="number" id="starting" required min="1">
+        </div>
+        <div class="field">
+          <label for="reserve">Prix de réserve (€, confidentiel)</label>
+          <input type="number" id="reserve" required min="1">
+        </div>
+        <div class="field">
+          <label for="increment">Palier d'enchère (€)</label>
+          <input type="number" id="increment" required min="1" value="100">
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="duration">Durée de l'enchère</label>
+        <select id="duration" required>
+          <option value="3">3 jours</option>
+          <option value="5">5 jours</option>
+          <option value="7">7 jours</option>
+          <option value="10">10 jours</option>
+          <option value="14">14 jours</option>
+        </select>
+        <p class="hint" id="duration-hint" style="margin:0.4rem 0 0;"></p>
+      </div>
+    </section>
+
+    <!-- ÉTAPE 2A : caractéristiques BATEAU (masquée si équipement) -->
+    <section class="spec-panel" data-step="2-boat">
+      <p class="section-title">Caractéristiques du bateau</p>
+      <p class="hint">Si tu ne sais pas, laisse vide — rien n'est obligatoire ici.</p>
+      <div class="field-row">
+        <div class="field"><label for="b-marque">Marque</label><input type="text" id="b-marque"></div>
+        <div class="field"><label for="b-modele">Modèle / Type</label><input type="text" id="b-modele"></div>
+        <div class="field"><label for="b-annee">Année de construction</label><input type="number" id="b-annee"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label for="b-longueur">Longueur (m)</label><input type="number" step="0.1" id="b-longueur"></div>
+        <div class="field"><label for="b-largeur">Largeur (m)</label><input type="number" step="0.1" id="b-largeur"></div>
+        <div class="field"><label for="b-tirant">Tirant d'eau (m)</label><input type="number" step="0.1" id="b-tirant"></div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="b-materiau">Matériau de la coque</label>
+          <select id="b-materiau">
+            <option value=""></option>
+            <option>Polyester</option><option>Aluminium</option><option>Bois</option><option>Acier</option><option>PVC / Hypalon (semi-rigide)</option>
+          </select>
+        </div>
+        <div class="field"><label for="b-couchages">Nombre de couchettes</label><input type="number" id="b-couchages"></div>
+        <div class="field">
+          <label for="b-immat">Immatriculation</label>
+          <select id="b-immat"><option value=""></option><option>Oui</option><option>Non</option></select>
+        </div>
+      </div>
+    </section>
+
+    <!-- ÉTAPE 2B : caractéristiques ÉQUIPEMENT (masquée si bateau) -->
+    <section class="spec-panel" data-step="2-equip">
+      <p class="section-title">Caractéristiques de l'équipement</p>
+      <div class="field-row">
+        <div class="field"><label for="e-type">Type d'équipement</label>
+          <select id="e-type" required>
+            <option value=""></option>
+            <option>Voile / gréement</option><option>Moteur</option><option>Électronique / navigation</option>
+            <option>Sécurité</option><option>Accastillage divers</option><option>Remorque</option><option>Autre</option>
+          </select>
+        </div>
+        <div class="field"><label for="e-marque">Marque</label><input type="text" id="e-marque"></div>
+        <div class="field"><label for="e-modele">Modèle</label><input type="text" id="e-modele"></div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="e-etat">État</label>
+          <select id="e-etat">
+            <option value=""></option>
+            <option>Neuf</option><option>Très bon état</option><option>Bon état</option><option>État moyen</option><option>Pour pièces</option>
+          </select>
+        </div>
+        <div class="field"><label for="e-annee">Année d'achat</label><input type="number" id="e-annee"></div>
+        <div class="field"><label for="e-poids">Poids (kg, si pertinent)</label><input type="number" id="e-poids"></div>
+      </div>
+      <div class="field">
+        <label for="e-compat">Compatibilité (facultatif)</label>
+        <input type="text" id="e-compat" placeholder="Ex. Compatible voiliers 30-35 pieds, winch Harken taille 40...">
+      </div>
+    </section>
+
+    <!-- ÉTAPE 3 : équipements à bord (bateaux uniquement) -->
+    <section class="spec-panel" data-step="3-boat">
+      <p class="section-title">Moteur & électricité</p>
+      <div class="field-row">
+        <div class="field">
+          <label for="m-type">Type de moteur</label>
+          <select id="m-type"><option value=""></option><option>Hors-bord</option><option>Inboard</option><option>Aucun (voile pure)</option></select>
+        </div>
+        <div class="field"><label for="m-marque">Marque moteur</label><input type="text" id="m-marque"></div>
+        <div class="field"><label for="m-puissance">Puissance (ch)</label><input type="number" id="m-puissance"></div>
+        <div class="field"><label for="m-heures">Heures moteur</label><input type="number" id="m-heures"></div>
+      </div>
+
+      <p class="section-title">Navigation & électronique présentes à bord</p>
+      <div class="check-grid" id="nav-checks">
+        <label><input type="checkbox" value="GPS"> GPS</label>
+        <label><input type="checkbox" value="VHF"> VHF</label>
+        <label><input type="checkbox" value="Pilote automatique"> Pilote automatique</label>
+        <label><input type="checkbox" value="Compas"> Compas</label>
+        <label><input type="checkbox" value="Sondeur"> Sondeur</label>
+        <label><input type="checkbox" value="Loch/speedomètre"> Loch/speedomètre</label>
+        <label><input type="checkbox" value="AIS"> AIS</label>
+        <label><input type="checkbox" value="Radar"> Radar</label>
+        <label><input type="checkbox" value="Traceur de cartes"> Traceur de cartes</label>
+      </div>
+
+      <p class="section-title">Gréement (voiliers)</p>
+      <div class="field-row">
+        <div class="field"><label for="g-mats">Nombre de mâts</label><input type="number" id="g-mats"></div>
+        <div class="field">
+          <label for="g-etat">État des voiles</label>
+          <select id="g-etat"><option value=""></option><option>Neuves</option><option>Bon</option><option>Moyen</option><option>À changer</option></select>
+        </div>
+      </div>
+      <div class="check-grid" id="greement-checks">
+        <label><input type="checkbox" value="Grand-voile"> Grand-voile</label>
+        <label><input type="checkbox" value="Génois"> Génois</label>
+        <label><input type="checkbox" value="Foc"> Foc</label>
+        <label><input type="checkbox" value="Spi"> Spi</label>
+        <label><input type="checkbox" value="Gennaker"> Gennaker</label>
+        <label><input type="checkbox" value="Foc d'orage"> Foc d'orage</label>
+      </div>
+
+      <p class="section-title">Sécurité & équipement extérieur</p>
+      <div class="check-grid" id="securite-checks">
+        <label><input type="checkbox" value="Bouée de sauvetage"> Bouée de sauvetage</label>
+        <label><input type="checkbox" value="Radeau de survie"> Radeau de survie</label>
+        <label><input type="checkbox" value="Cockpit autovideur"> Cockpit autovideur</label>
+        <label><input type="checkbox" value="Pompe de cale"> Pompe de cale</label>
+        <label><input type="checkbox" value="Bimini"> Bimini</label>
+        <label><input type="checkbox" value="Taud"> Taud</label>
+        <label><input type="checkbox" value="Défenses et cordages"> Défenses et cordages</label>
+        <label><input type="checkbox" value="Annexe"> Annexe</label>
+      </div>
+    </section>
+
+    <!-- ÉTAPE 4 : description, documents, photo -->
+    <section class="spec-panel" data-step="4">
+      <p class="section-title">Description & documents</p>
+      <div class="field">
+        <label for="description">Description</label>
+        <textarea id="description" required placeholder="État général, historique, ce qui est inclus dans la vente..."></textarea>
+      </div>
+      <div class="field">
+        <label for="documents">Documents disponibles (un par ligne, facultatif)</label>
+        <textarea id="documents" placeholder="Acte de francisation&#10;Dernier rapport de visite technique"></textarea>
+      </div>
+      <div class="field">
+        <label for="photos">Photos</label>
+        <input type="file" id="photos" accept="image/*" multiple>
+        <p class="hint" style="margin:0.4rem 0 0;">Ajoute une ou plusieurs photos, puis choisis la couverture et l'ordre d'affichage ci-dessous.</p>
+        <div id="photos-list" class="photo-list"></div>
+      </div>
+      <div class="field">
+        <label for="video">Vidéo de présentation (facultative, 1 fichier)</label>
+        <input type="file" id="video" accept="video/*">
+        <div id="video-preview" class="media-preview"></div>
+      </div>
+    </section>
+
+    <!-- ÉTAPE 5 : récapitulatif -->
+    <section class="spec-panel" data-step="5">
+      <div id="step5-form-content">
+        <p class="section-title">Dernière vérification</p>
+        <p class="hint">Relis les infos saisies dans les étapes précédentes avant d'envoyer. Le lot sera visible par l'équipe de modération, pas encore publiquement.</p>
+        <div class="field">
+          <label><input type="checkbox" id="confirm-honest" style="width:auto; display:inline-block; margin-right:0.5rem;" required>Je certifie que les informations fournies sont exactes.</label>
+        </div>
+        <button type="submit" class="btn btn--primary" style="width:100%; padding:0.85rem;">Soumettre le lot pour modération</button>
+        <p id="sell-feedback" style="font-size:0.85rem; margin-top:0.8rem;" role="status"></p>
+      </div>
+
+      <div id="step5-success" style="display:none; text-align:center; padding:2rem 0;">
+        <p class="section-title" style="color:var(--mistral);">✓ Lot soumis</p>
+        <p class="hint">Il passera en ligne après validation par l'équipe de modération.</p>
+        <button type="button" class="btn btn--primary" id="new-lot-btn" style="margin-top:1rem;">Déposer un autre lot</button>
+      </div>
+    </section>
+
+    <div class="wizard-nav" id="wizard-nav">
+      <button type="button" class="btn btn--ghost" id="wizard-prev">Précédent</button>
+      <button type="button" class="btn btn--primary" id="wizard-next">Suivant</button>
+    </div>
+  </form>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase-client.js"></script>
+<script src="js/auth.js"></script>
+<script>
+// ---------- Assistant multi-étapes, avec branche bateau / équipement ----------
+function currentSteps() {
+  const isEquip = document.getElementById('category').value === 'equipement';
+  return isEquip ? ['1', '2-equip', '4', '5'] : ['1', '2-boat', '3-boat', '4', '5'];
+}
+const STEP_LABELS = {
+  '1': 'Infos de base',
+  '2-boat': 'Caractéristiques',
+  '2-equip': 'Caractéristiques',
+  '3-boat': 'Équipements à bord',
+  '4': 'Description & docs',
+  '5': 'Récapitulatif',
+};
+
+let stepIndex = 0;
+
+function renderTabs() {
+  const steps = currentSteps();
+  const tabs = document.getElementById('wizard-tabs');
+  tabs.innerHTML = steps.map((s, i) => {
+    const done = i < stepIndex ? ' spec-tab--done' : '';
+    return `<button type="button" class="spec-tab${done}" data-goto="${i}" aria-selected="${i === stepIndex}">${i + 1}. ${STEP_LABELS[s]}</button>`;
+  }).join('');
+  tabs.querySelectorAll('.spec-tab').forEach(t => t.addEventListener('click', () => goToStep(Number(t.dataset.goto))));
+}
+
+function showStep() {
+  const steps = currentSteps();
+  if (stepIndex >= steps.length) stepIndex = steps.length - 1;
+  document.querySelectorAll('.spec-panel[data-step]').forEach(p => p.classList.remove('active'));
+  const target = document.querySelector(`.spec-panel[data-step="${steps[stepIndex]}"]`);
+  if (target) target.classList.add('active');
+  renderTabs();
+  const pct = Math.round(((stepIndex + 1) / steps.length) * 100);
+  document.getElementById('wizard-progress-bar').style.width = `${pct}%`;
+  document.getElementById('wizard-progress-pct').textContent = `${pct}%`;
+  document.getElementById('wizard-prev').style.visibility = stepIndex === 0 ? 'hidden' : 'visible';
+  document.getElementById('wizard-next').style.display = stepIndex === steps.length - 1 ? 'none' : 'inline-block';
+}
+
+function goToStep(i) { stepIndex = i; showStep(); }
+
+document.getElementById('wizard-next').addEventListener('click', () => {
+  const steps = currentSteps();
+  const currentPanel = document.querySelector(`.spec-panel[data-step="${steps[stepIndex]}"]`);
+  const invalidField = currentPanel.querySelector(':invalid');
+  if (invalidField) { invalidField.reportValidity(); return; }
+  if (stepIndex < steps.length - 1) { stepIndex++; showStep(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+});
+document.getElementById('wizard-prev').addEventListener('click', () => {
+  if (stepIndex > 0) { stepIndex--; showStep(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+});
+document.getElementById('category').addEventListener('change', () => { stepIndex = 0; showStep(); syncRequiredFields(); syncDurationDefault(); });
+
+function syncRequiredFields() {
+  const isEquip = document.getElementById('category').value === 'equipement';
+  document.getElementById('e-type').required = isEquip;
+}
+syncRequiredFields();
+
+// La durée par défaut diffère selon le type de bien : un bateau demande une visite,
+// un temps de réflexion — un délai plus long sert le vendeur. Un article d'accastillage
+// se décide vite — un délai court crée de l'urgence, sans empêcher de choisir autre chose.
+let durationTouchedByUser = false;
+document.getElementById('duration').addEventListener('change', () => { durationTouchedByUser = true; updateDurationHint(); });
+
+function syncDurationDefault() {
+  if (durationTouchedByUser) { updateDurationHint(); return; }
+  const isEquip = document.getElementById('category').value === 'equipement';
+  document.getElementById('duration').value = isEquip ? '5' : '10';
+  updateDurationHint();
+}
+
+function updateDurationHint() {
+  const isEquip = document.getElementById('category').value === 'equipement';
+  document.getElementById('duration-hint').textContent = isEquip
+    ? 'Un délai court crée de l\'urgence sur ce type d\'achat, rapide à décider.'
+    : 'Un bateau demande souvent une visite avant d\'enchérir — un délai plus long augmente tes chances de vente.';
+}
+syncDurationDefault();
+
+showStep();
+
+// ---------- Soumission ----------
+function checkedValues(containerId) {
+  return Array.from(document.querySelectorAll(`#${containerId} input:checked`)).map(el => el.value);
+}
+function checksToObject(containerId) {
+  const out = {};
+  checkedValues(containerId).forEach(v => out[v] = '✓');
+  return out;
+}
+function parseLines(text) {
+  return text.split('\n').map(l => l.trim()).filter(Boolean);
+}
+
+// ---------- Brouillon auto-sauvegardé (survit aux coupures réseau / rechargements) ----------
+const DRAFT_KEY = 'kriee-draft-lot';
+const CHECK_GROUPS = ['nav-checks', 'greement-checks', 'securite-checks'];
+
+function saveDraft() {
+  const fields = {};
+  document.querySelectorAll('#sell-form input[id], #sell-form select[id], #sell-form textarea[id]').forEach(el => {
+    if (el.type === 'checkbox' || el.type === 'file') return;
+    fields[el.id] = el.value;
+  });
+  const checks = {};
+  CHECK_GROUPS.forEach(id => { checks[id] = checkedValues(id); });
+  localStorage.setItem(DRAFT_KEY, JSON.stringify({ fields, checks, stepIndex }));
+  document.getElementById('draft-status').textContent = 'Brouillon enregistré automatiquement.';
+}
+
+function restoreDraft() {
+  const raw = localStorage.getItem(DRAFT_KEY);
+  if (!raw) return;
+  try {
+    const draft = JSON.parse(raw);
+    Object.entries(draft.fields || {}).forEach(([id, val]) => {
+      const el = document.getElementById(id);
+      if (el && el.type !== 'file') el.value = val;
+    });
+    CHECK_GROUPS.forEach(id => {
+      const values = (draft.checks || {})[id] || [];
+      document.querySelectorAll(`#${id} input[type="checkbox"]`).forEach(cb => { cb.checked = values.includes(cb.value); });
+    });
+    syncRequiredFields();
+    if (typeof draft.stepIndex === 'number') stepIndex = draft.stepIndex;
+    showStep();
+    document.getElementById('draft-status').textContent = 'Brouillon restauré depuis ta dernière session.';
+    document.getElementById('clear-draft').style.display = 'inline';
+  } catch (err) { /* brouillon corrompu, ignoré silencieusement */ }
+}
+
+function clearDraft() {
+  localStorage.removeItem(DRAFT_KEY);
+  document.getElementById('sell-form').reset();
+  stepIndex = 0;
+  syncRequiredFields();
+  showStep();
+  document.getElementById('draft-status').textContent = '';
+  document.getElementById('clear-draft').style.display = 'none';
+}
+
+document.getElementById('sell-form').addEventListener('input', saveDraft);
+document.getElementById('sell-form').addEventListener('change', saveDraft);
+document.getElementById('clear-draft').addEventListener('click', clearDraft);
+
+document.getElementById('new-lot-btn').addEventListener('click', () => {
+  document.getElementById('sell-form').reset();
+  document.getElementById('step5-form-content').style.display = 'block';
+  document.getElementById('step5-success').style.display = 'none';
+  document.getElementById('wizard-nav').style.display = 'flex';
+  document.getElementById('wizard-tabs').style.display = 'flex';
+  document.querySelector('.wizard-progress-row').style.display = 'flex';
+  document.getElementById('draft-status').textContent = '';
+  document.getElementById('sell-feedback').textContent = '';
+  selectedPhotos = [];
+  document.getElementById('photos-list').innerHTML = '';
+  document.getElementById('video-preview').innerHTML = '';
+  stepIndex = 0;
+  syncRequiredFields();
+  durationTouchedByUser = false;
+  syncDurationDefault();
+  showStep();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+
+// ---------- Gestion des photos : ajout, couverture, ordre, suppression ----------
+let selectedPhotos = [];
+
+function renderPhotoList() {
+  const list = document.getElementById('photos-list');
+  list.innerHTML = selectedPhotos.map((file, i) => `
+    <div class="photo-item">
+      <img src="${URL.createObjectURL(file)}">
+      ${i === 0 ? '<span class="photo-item__badge">Couverture</span>' : ''}
+      <div class="photo-item__actions">
+        ${i !== 0 ? `<button type="button" data-action="cover" data-idx="${i}" title="Définir comme couverture">★</button>` : ''}
+        ${i > 0 ? `<button type="button" data-action="up" data-idx="${i}" title="Monter">↑</button>` : ''}
+        ${i < selectedPhotos.length - 1 ? `<button type="button" data-action="down" data-idx="${i}" title="Descendre">↓</button>` : ''}
+        <button type="button" class="danger" data-action="remove" data-idx="${i}" title="Retirer">✕</button>
+      </div>
+    </div>
+  `).join('');
+
+  list.querySelectorAll('button[data-action]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = Number(btn.dataset.idx);
+      const action = btn.dataset.action;
+      if (action === 'cover') {
+        const [item] = selectedPhotos.splice(idx, 1);
+        selectedPhotos.unshift(item);
+      } else if (action === 'up') {
+        [selectedPhotos[idx - 1], selectedPhotos[idx]] = [selectedPhotos[idx], selectedPhotos[idx - 1]];
+      } else if (action === 'down') {
+        [selectedPhotos[idx + 1], selectedPhotos[idx]] = [selectedPhotos[idx], selectedPhotos[idx + 1]];
+      } else if (action === 'remove') {
+        selectedPhotos.splice(idx, 1);
+      }
+      renderPhotoList();
+    });
+  });
+}
+
+document.getElementById('photos').addEventListener('change', (e) => {
+  selectedPhotos.push(...Array.from(e.target.files));
+  e.target.value = ''; // vidé pour permettre d'ajouter d'autres photos ensuite sans remplacer les précédentes
+  renderPhotoList();
+});
+
+document.getElementById('video').addEventListener('change', (e) => {
+  const preview = document.getElementById('video-preview');
+  preview.innerHTML = '';
+  if (e.target.files[0]) {
+    const video = document.createElement('video');
+    video.src = URL.createObjectURL(e.target.files[0]);
+    video.controls = true;
+    preview.appendChild(video);
+  }
+});
+
+restoreDraft();
+
+document.getElementById('sell-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const feedback = document.getElementById('sell-feedback');
+  const isConfigured = !SUPABASE_URL.includes('TON-PROJET');
+
+  if (!isConfigured) {
+    feedback.textContent = 'Démo : connecte Supabase (js/supabase-client.js) pour publier réellement un lot.';
+    feedback.style.color = 'var(--mistral)';
+    return;
+  }
+
+  try {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (!session) {
+      feedback.textContent = 'Connecte-toi pour déposer un lot.';
+      feedback.style.color = 'var(--buoy)';
+      return;
+    }
+
+  const categorySlug = document.getElementById('category').value;
+  const isEquip = categorySlug === 'equipement';
+
+  const { data: cat, error: catError } = await supabaseClient.from('categories').select('id').eq('slug', categorySlug).single();
+  if (catError || !cat) {
+    feedback.textContent = 'Erreur lors de la lecture des catégories : ' + (catError ? catError.message : 'catégorie introuvable') + '. Vérifie que la table categories a bien une policy de lecture publique.';
+    feedback.style.color = 'var(--buoy)';
+    return;
+  }
+
+  let generalSpecs = {};
+  if (isEquip) {
+    generalSpecs = {
+      "Type d'équipement": document.getElementById('e-type').value,
+      "Marque": document.getElementById('e-marque').value,
+      "Modèle": document.getElementById('e-modele').value,
+      "État": document.getElementById('e-etat').value,
+      "Année d'achat": document.getElementById('e-annee').value,
+      "Poids (kg)": document.getElementById('e-poids').value,
+      "Compatibilité": document.getElementById('e-compat').value,
+    };
+  } else {
+    generalSpecs = {
+      "Marque": document.getElementById('b-marque').value,
+      "Modèle / Type": document.getElementById('b-modele').value,
+      "Année de construction": document.getElementById('b-annee').value,
+      "Longueur (m)": document.getElementById('b-longueur').value,
+      "Largeur (m)": document.getElementById('b-largeur').value,
+      "Tirant d'eau (m)": document.getElementById('b-tirant').value,
+      "Matériau": document.getElementById('b-materiau').value,
+      "Nombre de couchettes": document.getElementById('b-couchages').value,
+      "Immatriculation": document.getElementById('b-immat').value,
+    };
+  }
+  // Retire les champs vides pour ne pas polluer l'affichage en onglets
+  Object.keys(generalSpecs).forEach(k => { if (!generalSpecs[k]) delete generalSpecs[k]; });
+
+  const specs = {
+    general: generalSpecs,
+    documents: parseLines(document.getElementById('documents').value),
+  };
+
+  if (!isEquip) {
+    const moteurSpecs = {
+      "Type de moteur": document.getElementById('m-type').value,
+      "Marque moteur": document.getElementById('m-marque').value,
+      "Puissance (ch)": document.getElementById('m-puissance').value,
+      "Heures moteur": document.getElementById('m-heures').value,
+    };
+    Object.keys(moteurSpecs).forEach(k => { if (!moteurSpecs[k]) delete moteurSpecs[k]; });
+    specs.moteur = moteurSpecs;
+    specs.navigation = checksToObject('nav-checks');
+
+    const greementSpecs = checksToObject('greement-checks');
+    const gMats = document.getElementById('g-mats').value;
+    const gEtat = document.getElementById('g-etat').value;
+    if (gMats) greementSpecs['Nombre de mâts'] = gMats;
+    if (gEtat) greementSpecs['État des voiles'] = gEtat;
+    specs.greement = greementSpecs;
+
+    specs.securite = checksToObject('securite-checks');
+  }
+
+  // Géocodage best-effort de l'adresse — n'attend jamais plus de 3s (voir geocodeAddress), et un échec
+  // ne bloque jamais la création du lot : coords reste simplement à null, le repli région prend le relais côté affichage.
+  const address = [document.getElementById('port').value, document.getElementById('region').value, 'France'].filter(Boolean).join(', ');
+  const coords = await geocodeAddress(address);
+
+  // Upload des photos/vidéo avant l'insertion — le lot n'est créé qu'une fois les fichiers en ligne
+  const photoFiles = selectedPhotos;
+  const videoFile = document.getElementById('video').files[0];
+  let imageUrls = [];
+  let videoUrl = null;
+
+  if (photoFiles.length || videoFile) {
+    feedback.textContent = `Envoi des fichiers (0/${photoFiles.length + (videoFile ? 1 : 0)})...`;
+    feedback.style.color = 'var(--mistral)';
+  }
+  let uploaded = 0;
+  const totalFiles = photoFiles.length + (videoFile ? 1 : 0);
+  for (const file of photoFiles) {
+    imageUrls.push(await uploadLotMedia(file, session.user.id));
+    uploaded++;
+    if (totalFiles) feedback.textContent = `Envoi des fichiers (${uploaded}/${totalFiles})...`;
+  }
+  if (videoFile) {
+    videoUrl = await uploadLotMedia(videoFile, session.user.id);
+    uploaded++;
+    feedback.textContent = `Envoi des fichiers (${uploaded}/${totalFiles})...`;
+  }
+
+  const { error } = await supabaseClient.from('lots').insert({
+    seller_id: session.user.id,
+    category_id: cat.id,
+    title: document.getElementById('title').value,
+    description: document.getElementById('description').value,
+    region: document.getElementById('region').value,
+    port_location: document.getElementById('port').value,
+    starting_price: Number(document.getElementById('starting').value),
+    current_price: Number(document.getElementById('starting').value),
+    reserve_price: Number(document.getElementById('reserve').value),
+    bid_increment: Number(document.getElementById('increment').value),
+    cover_image_url: imageUrls[0] || null,
+    lat: coords?.lat ?? null,
+    lng: coords?.lng ?? null,
+    images: imageUrls,
+    video_url: videoUrl,
+    specs,
+    status: 'draft',
+    starts_at: new Date().toISOString(),
+    ends_at: new Date(Date.now() + 1000 * 60 * 60 * 24 * Number(document.getElementById('duration').value)).toISOString(),
+  });
+
+  if (error) {
+    feedback.textContent = error.message;
+    feedback.style.color = 'var(--buoy)';
+  } else {
+    localStorage.removeItem(DRAFT_KEY);
+    selectedPhotos = [];
+    document.getElementById('photos-list').innerHTML = '';
+    document.getElementById('video-preview').innerHTML = '';
+    document.getElementById('step5-form-content').style.display = 'none';
+    document.getElementById('step5-success').style.display = 'block';
+    document.getElementById('wizard-nav').style.display = 'none';
+    document.getElementById('wizard-tabs').style.display = 'none';
+    document.querySelector('.wizard-progress-row').style.display = 'none';
+  }
+  } catch (err) {
+    feedback.textContent = 'Erreur inattendue : ' + err.message;
+    feedback.style.color = 'var(--buoy)';
+    console.error(err);
+  }
+});
+</script>
+</body>
+</html>

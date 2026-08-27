@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Modération — Kriee</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .admin-wrap { max-width: 1100px; margin: 0 auto; padding: 2rem; }
+  .admin-filters { display: flex; gap: 0.6rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+  .admin-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+  .admin-table th { text-align: left; font-family: var(--font-data); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: #5A6772; padding: 0.6rem; border-bottom: 1px solid #C9C2B2; }
+  .admin-table td { padding: 0.7rem 0.6rem; border-bottom: 1px solid #E4DFD3; vertical-align: middle; }
+  .admin-table img { width: 46px; height: 46px; object-fit: cover; border-radius: 3px; vertical-align: middle; }
+  .status-pill { font-family: var(--font-data); font-size: 0.7rem; padding: 0.2rem 0.55rem; border-radius: 999px; text-transform: uppercase; }
+  .status-pill--draft { background: #F1EEE6; color: #5A6772; }
+  .status-pill--live { background: #DCEFE3; color: #1D6B3E; }
+  .status-pill--sold { background: #E4DFF6; color: #4B3B9C; }
+  .status-pill--cancelled { background: #F6DCD8; color: var(--buoy); }
+  .admin-actions { display: flex; gap: 0.4rem; }
+  .btn--sm { padding: 0.35rem 0.7rem; font-size: 0.78rem; }
+  .btn--danger { background: transparent; border: 1px solid var(--buoy); color: var(--buoy); border-radius: var(--radius); }
+  .btn--danger:hover { background: var(--buoy); color: var(--foam); }
+  .gate { max-width: 480px; margin: 4rem auto; padding: 2rem; text-align: center; }
+
+  .toast {
+    position: fixed; bottom: 1.5rem; right: 1.5rem; background: var(--ink); color: var(--foam);
+    padding: 0.9rem 1.3rem; border-radius: var(--radius); font-size: 0.88rem;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.25); z-index: 10000; max-width: 360px;
+    opacity: 0; transform: translateY(10px); transition: opacity 0.25s ease, transform 0.25s ease; pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.toast--error { background: var(--buoy); }
+
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(14,34,51,0.65);
+    z-index: 10001; align-items: center; justify-content: center; padding: 1.5rem;
+  }
+  .modal-box { background: var(--foam); border-radius: var(--radius); padding: 1.8rem; max-width: 440px; width: 100%; }
+  .modal-box h3 { font-family: var(--font-display); font-size: 1.2rem; margin: 0 0 1.2rem; }
+  .modal-box .field { margin-bottom: 1rem; }
+  .modal-box label { display: block; font-size: 0.85rem; margin-bottom: 0.35rem; color: #5A6772; }
+  .modal-box select, .modal-box textarea {
+    width: 100%; padding: 0.6rem; border: 1px solid #C9C2B2; border-radius: 3px; font-family: var(--font-body); font-size: 0.9rem;
+  }
+  .modal-box textarea { min-height: 80px; }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 0.6rem; margin-top: 1.2rem; }
+
+  .reserve-badge { font-family: var(--font-data); font-size: 0.7rem; padding: 0.2rem 0.5rem; border-radius: 999px; white-space: nowrap; }
+  .reserve-badge--met { background: #DCEFE3; color: #1D6B3E; }
+  .reserve-badge--not { background: #F1EEE6; color: #5A6772; }
+  .reserve-cell { font-size: 0.82rem; }
+  .reserve-cell__gap { color: #5A6772; font-size: 0.74rem; display: block; }
+
+  .revenue-dash {
+    background: var(--ink); color: var(--foam);
+    border-radius: var(--radius); padding: 1.8rem 2rem; margin-bottom: 2rem;
+    position: relative; overflow: hidden;
+  }
+  .revenue-dash__title { font-family: var(--font-display); font-size: 1.15rem; margin: 0 0 1.4rem; position: relative; }
+  .revenue-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1.5rem; position: relative; }
+  .revenue-grid__item { border-left: 2px solid var(--brass); padding-left: 0.9rem; }
+  .revenue-grid__num { font-family: var(--font-data); font-size: 1.5rem; font-weight: 600; display: block; color: var(--foam); }
+  .revenue-grid__label { font-size: 0.74rem; color: #AAB8C2; text-transform: uppercase; letter-spacing: 0.04em; }
+  .revenue-potential { margin-top: 1.4rem; padding-top: 1.2rem; border-top: 1px solid #24384A; position: relative; }
+  .revenue-potential__num { font-family: var(--font-data); font-size: 1.8rem; font-weight: 600; color: var(--brass); }
+  .revenue-potential__label { font-size: 0.82rem; color: #C9D3D9; }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <a href="index.html" class="brand">
+    <svg class="brand__mark" width="24" height="26" viewBox="0 0 24 26" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <line x1="5" y1="1" x2="5" y2="25" stroke="#0E2233" stroke-width="2"/>
+      <path d="M5 3 L21 8.5 L5 14 Z" fill="#C7401F"/>
+    </svg>
+    <span class="brand__word">Kri<span style="color:var(--buoy)">ee</span></span>
+    <span class="brand__sub">SUD DE LA FRANCE</span>
+  </a>
+  <nav class="site-nav">
+    <a href="encheres.html">Enchères en cours</a>
+    <a href="vendre.html">Vendre un bateau</a>
+    <a href="#" class="btn btn--ghost" id="nav-login">Se connecter</a>
+  </nav>
+</header>
+
+<div class="page-band page-band--slim">
+  <span class="page-band__back">Modération — réservé aux admins</span>
+</div>
+
+<div id="gate-denied" class="gate" style="display:none;">
+  <p>Accès réservé aux administrateurs.</p>
+  <a href="index.html" class="btn btn--primary">Retour aux enchères</a>
+</div>
+
+<main class="admin-wrap" id="admin-content" style="display:none;">
+
+  <div class="revenue-dash">
+    <p class="revenue-dash__title">Revenu plateforme (frais de vente 18% HT, hors TVA)</p>
+    <div class="revenue-grid">
+      <div class="revenue-grid__item">
+        <span class="revenue-grid__num" id="rev-today">0 €</span>
+        <span class="revenue-grid__label">Aujourd'hui</span>
+      </div>
+      <div class="revenue-grid__item">
+        <span class="revenue-grid__num" id="rev-month">0 €</span>
+        <span class="revenue-grid__label">Ce mois</span>
+      </div>
+      <div class="revenue-grid__item">
+        <span class="revenue-grid__num" id="rev-year">0 €</span>
+        <span class="revenue-grid__label">Cette année</span>
+      </div>
+      <div class="revenue-grid__item">
+        <span class="revenue-grid__num" id="rev-total">0 €</span>
+        <span class="revenue-grid__label">Total réalisé (lots vendus)</span>
+      </div>
+    </div>
+    <div class="revenue-potential">
+      <span class="revenue-potential__num" id="rev-potential">0 €</span>
+      <span class="revenue-potential__label"> de revenu potentiel sur les enchères en cours dont la réserve est déjà atteinte — encore susceptible d'augmenter avant clôture</span>
+    </div>
+  </div>
+
+  <div class="admin-filters" role="group">
+    <button class="chip" data-filter="draft" aria-pressed="true">En attente</button>
+    <button class="chip" data-filter="live">En ligne</button>
+    <button class="chip" data-filter="sold">Vendus</button>
+    <button class="chip" data-filter="unsold">Invendus</button>
+    <button class="chip" data-filter="cancelled">Refusés</button>
+    <button class="chip" data-filter="all">Tous</button>
+  </div>
+  <div class="admin-filters" role="group" aria-label="Filtrer par statut de réserve">
+    <button class="chip" data-reserve-filter="all" aria-pressed="true">Toutes réserves</button>
+    <button class="chip" data-reserve-filter="met">Réserve atteinte</button>
+    <button class="chip" data-reserve-filter="not">Réserve non atteinte</button>
+  </div>
+
+  <table class="admin-table">
+    <thead>
+      <tr>
+        <th></th>
+        <th>Lot</th>
+        <th>Vendeur</th>
+        <th>Enchère / Réserve</th>
+        <th>Statut</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="admin-rows"></tbody>
+  </table>
+  <p id="admin-empty" style="color:#5A6772; padding:1.5rem 0; display:none;">Aucun lot dans cette catégorie.</p>
+</main>
+
+<div class="modal-overlay" id="reject-modal">
+  <div class="modal-box">
+    <h3>Refuser ce lot</h3>
+    <div class="field">
+      <label for="reject-reason-select">Motif</label>
+      <select id="reject-reason-select">
+        <option>Photos insuffisantes ou de mauvaise qualité</option>
+        <option>Description incomplète ou peu claire</option>
+        <option>Prix de départ ou de réserve incohérent avec le marché</option>
+        <option>Informations manquantes ou douteuses</option>
+        <option>Catégorie ou type de bien non accepté sur la plateforme</option>
+        <option value="autre">Autre (préciser ci-dessous)</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="reject-reason-detail">Précisions pour le vendeur (facultatif, sauf si "Autre")</label>
+      <textarea id="reject-reason-detail" placeholder="Détaille si besoin — le vendeur verra ce message dans son espace Mon compte."></textarea>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn--ghost btn--sm" id="reject-cancel">Annuler</button>
+      <button type="button" class="btn--danger btn--sm" id="reject-confirm" style="padding:0.5rem 1rem;">Confirmer le refus</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase-client.js"></script>
+<script src="js/auth.js"></script>
+<script>
+let allLots = [];
+let activeFilter = 'draft';
+let activeReserveFilter = 'all';
+
+async function init() {
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (!session) {
+    document.getElementById('gate-denied').style.display = 'block';
+    document.getElementById('gate-denied').querySelector('p').textContent = 'Connecte-toi avec un compte administrateur.';
+    return;
+  }
+
+  const { data: profile } = await supabaseClient.from('profiles').select('is_admin').eq('id', session.user.id).single();
+  if (!profile || !profile.is_admin) {
+    document.getElementById('gate-denied').style.display = 'block';
+    return;
+  }
+
+  document.getElementById('admin-content').style.display = 'block';
+  loadLots();
+
+  supabaseClient.channel('admin:lots')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'lots' }, loadLots)
+    .subscribe();
+}
+
+async function loadLots() {
+  const { data, error } = await supabaseClient
+    .from('lots')
+    .select('*, categories(label), profiles(full_name)')
+    .order('created_at', { ascending: false });
+  if (error) { console.error(error); return; }
+  allLots = data;
+  render();
+}
+
+function isReserveMet(l) { return l.current_price >= l.reserve_price; }
+function buyerFeeHT(l) { return l.current_price * 0.18; }
+
+function renderRevenueDashboard() {
+  const now = new Date();
+  const sold = allLots.filter(l => l.status === 'sold');
+  const potential = allLots.filter(l => l.status === 'live' && isReserveMet(l));
+
+  const sumIf = (predicate) => sold.filter(predicate).reduce((sum, l) => sum + buyerFeeHT(l), 0);
+
+  const isSameDay = (d) => d.toDateString() === now.toDateString();
+  const isSameMonth = (d) => d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  const isSameYear = (d) => d.getFullYear() === now.getFullYear();
+
+  const todayTotal = sumIf(l => isSameDay(new Date(l.ends_at)));
+  const monthTotal = sumIf(l => isSameMonth(new Date(l.ends_at)));
+  const yearTotal = sumIf(l => isSameYear(new Date(l.ends_at)));
+  const grandTotal = sold.reduce((sum, l) => sum + buyerFeeHT(l), 0);
+  const potentialTotal = potential.reduce((sum, l) => sum + buyerFeeHT(l), 0);
+
+  document.getElementById('rev-today').textContent = formatEUR(todayTotal);
+  document.getElementById('rev-month').textContent = formatEUR(monthTotal);
+  document.getElementById('rev-year').textContent = formatEUR(yearTotal);
+  document.getElementById('rev-total').textContent = formatEUR(grandTotal);
+  document.getElementById('rev-potential').textContent = formatEUR(potentialTotal);
+}
+
+function render() {
+  renderRevenueDashboard();
+
+  const rows = document.getElementById('admin-rows');
+  let filtered = activeFilter === 'all' ? allLots : allLots.filter(l => l.status === activeFilter);
+  if (activeReserveFilter === 'met') filtered = filtered.filter(isReserveMet);
+  if (activeReserveFilter === 'not') filtered = filtered.filter(l => !isReserveMet(l));
+
+  document.getElementById('admin-empty').style.display = filtered.length ? 'none' : 'block';
+
+  rows.innerHTML = filtered.map(l => {
+    const met = isReserveMet(l);
+    const gap = l.reserve_price - l.current_price;
+    return `
+    <tr>
+      <td>${l.cover_image_url ? `<img src="${l.cover_image_url}">` : ''}</td>
+      <td><strong>${l.title}</strong><br><span style="color:#5A6772; font-size:0.8rem;">${l.categories?.label || ''} — ${l.region}</span></td>
+      <td>${l.profiles?.full_name || '—'}</td>
+      <td class="reserve-cell">
+        ${formatEUR(l.current_price)} <span class="reserve-badge ${met ? 'reserve-badge--met' : 'reserve-badge--not'}">${met ? '✓ Réserve atteinte' : 'Réserve non atteinte'}</span>
+        <span class="reserve-cell__gap">Réserve : ${formatEUR(l.reserve_price)}${met ? '' : ` (manque ${formatEUR(gap)})`}</span>
+      </td>
+      <td><span class="status-pill status-pill--${l.status === 'scheduled' ? 'draft' : l.status}">${l.status}</span></td>
+      <td class="admin-actions">
+        ${l.status === 'draft' ? `<button class="btn btn--primary btn--sm" data-action="publish" data-id="${l.id}" data-title="${l.title}">Publier</button>` : ''}
+        ${l.status === 'live' ? `<button class="btn btn--ghost btn--sm" data-action="unlist" data-id="${l.id}" data-title="${l.title}">Dépublier</button>` : ''}
+        ${l.status !== 'cancelled' ? `<button class="btn--danger btn--sm" data-action="reject" data-id="${l.id}" data-title="${l.title}">Refuser</button>` : ''}
+        <a href="lot.html?id=${l.id}" class="btn btn--ghost btn--sm" style="text-decoration:none;">Voir</a>
+      </td>
+    </tr>
+  `;
+  }).join('');
+
+  rows.querySelectorAll('button[data-action]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const { action, id, title } = btn.dataset;
+      if (action === 'reject') openRejectModal(id, title);
+      else handleAction(action, id, title);
+    });
+  });
+}
+
+function showToast(message, type) {
+  let toast = document.getElementById('admin-toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'admin-toast';
+    document.body.appendChild(toast);
+  }
+  toast.textContent = message;
+  toast.className = 'toast show' + (type === 'error' ? ' toast--error' : '');
+  clearTimeout(toast._hideTimeout);
+  toast._hideTimeout = setTimeout(() => toast.classList.remove('show'), 4000);
+}
+
+async function handleAction(action, id, title) {
+  const updates = {
+    publish: { status: 'live', starts_at: new Date().toISOString(), ends_at: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7).toISOString(), moderation_note: null },
+    unlist: { status: 'draft' },
+  }[action];
+  const { error } = await supabaseClient.from('lots').update(updates).eq('id', id);
+  if (error) { showToast('Erreur : ' + error.message, 'error'); return; }
+  const messages = {
+    publish: `✓ "${title}" publié — en ligne dès maintenant.`,
+    unlist: `"${title}" dépublié — repassé en attente.`,
+  };
+  showToast(messages[action], 'success');
+}
+
+// ---------- Modale de refus avec motif ----------
+let pendingRejectId = null;
+let pendingRejectTitle = '';
+
+function openRejectModal(id, title) {
+  pendingRejectId = id;
+  pendingRejectTitle = title;
+  document.getElementById('reject-reason-select').selectedIndex = 0;
+  document.getElementById('reject-reason-detail').value = '';
+  document.getElementById('reject-modal').style.display = 'flex';
+}
+
+document.getElementById('reject-cancel').addEventListener('click', () => {
+  document.getElementById('reject-modal').style.display = 'none';
+  pendingRejectId = null;
+});
+
+document.getElementById('reject-confirm').addEventListener('click', async () => {
+  const select = document.getElementById('reject-reason-select');
+  const detail = document.getElementById('reject-reason-detail').value.trim();
+
+  if (select.value === 'autre' && !detail) {
+    alert('Précise le motif dans le champ de texte avant de confirmer.');
+    return;
+  }
+
+  const reason = select.value === 'autre'
+    ? detail
+    : (detail ? `${select.value} — ${detail}` : select.value);
+
+  const { error } = await supabaseClient.from('lots').update({ status: 'cancelled', moderation_note: reason }).eq('id', pendingRejectId);
+  document.getElementById('reject-modal').style.display = 'none';
+
+  if (error) showToast('Erreur : ' + error.message, 'error');
+  else showToast(`"${pendingRejectTitle}" refusé — le motif est visible par le vendeur dans son espace Mon compte.`, 'success');
+
+  pendingRejectId = null;
+});
+
+document.querySelectorAll('.chip[data-filter]').forEach(chip => {
+  chip.addEventListener('click', () => {
+    document.querySelectorAll('.chip[data-filter]').forEach(c => c.setAttribute('aria-pressed', 'false'));
+    chip.setAttribute('aria-pressed', 'true');
+    activeFilter = chip.dataset.filter;
+    render();
+  });
+});
+document.querySelectorAll('.chip[data-reserve-filter]').forEach(chip => {
+  chip.addEventListener('click', () => {
+    document.querySelectorAll('.chip[data-reserve-filter]').forEach(c => c.setAttribute('aria-pressed', 'false'));
+    chip.setAttribute('aria-pressed', 'true');
+    activeReserveFilter = chip.dataset.reserveFilter;
+    render();
+  });
+});
+
+init();
+</script>
+</body>
+</html>

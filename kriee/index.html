@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kriee — Ventes aux enchères de bateaux et équipement nautique, Sud de la France</title>
+<meta name="description" content="Enchères de voiliers, bateaux à moteur, semi-rigides et accastillage entre particuliers du Sud de la France. Vente sans frais vendeur.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="ticker" aria-label="Lots qui clôturent bientôt">
+  <div class="ticker__track" id="ticker-track">
+    <!-- rempli en JS -->
+  </div>
+</div>
+
+<header class="site-header">
+  <a href="index.html" class="brand">
+    <svg class="brand__mark" width="24" height="26" viewBox="0 0 24 26" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <line x1="5" y1="1" x2="5" y2="25" stroke="#0E2233" stroke-width="2"/>
+      <path d="M5 3 L21 8.5 L5 14 Z" fill="#C7401F"/>
+    </svg>
+    <span class="brand__word">Kri<span style="color:var(--buoy)">ee</span></span>
+    <span class="brand__sub">SUD DE LA FRANCE</span>
+  </a>
+  <nav class="site-nav">
+    <a href="encheres.html">Enchères en cours</a>
+    <a href="vendre.html">Vendre un bateau</a>
+    <a href="#comment-ca-marche">Comment ça marche</a>
+    <a href="#" class="btn btn--ghost" id="nav-login">Se connecter</a>
+  </nav>
+</header>
+
+<section class="hero">
+  <div class="hero__gust" aria-hidden="true"></div>
+  <div class="hero__inner">
+    <p class="hero__eyebrow">Toulon · Marseille · La Ciotat · Sète — extension Sud en cours</p>
+    <h1>Le vrai prix, pas l'annonce qui traîne.</h1>
+    <p class="hero__tagline">Pour ceux qui veulent vendre. <span style="color:var(--buoy)">Vraiment.</span></p>
+    <p>Votre attachement fixe un prix. Le marché en décide un autre — en direct, pas dans 587 jours.</p>
+    <div class="hero__actions">
+      <a href="encheres.html" class="btn btn--primary">Voir les enchères en cours</a>
+      <a href="vendre.html" class="btn btn--ghost" style="border-color:var(--foam); color:var(--foam)">Mettre un bateau en vente</a>
+    </div>
+
+    <div class="fee-strip">
+      <div class="fee-strip__item">
+        <span class="fee-strip__num">0%</span>
+        <span class="fee-strip__label">de frais pour le vendeur — vous touchez le prix marteau intégral</span>
+      </div>
+      <div class="fee-strip__item">
+        <span class="fee-strip__num">18%</span>
+        <span class="fee-strip__label">de frais de vente à la charge de l'acheteur (+ TVA 21% sur ces frais)</span>
+      </div>
+      <div class="fee-strip__item">
+        <span class="fee-strip__num">3 min</span>
+        <span class="fee-strip__label">de prolongation automatique en cas d'enchère de dernière minute</span>
+      </div>
+      <div class="fee-strip__item">
+        <span class="fee-strip__num">587 j.</span>
+        <span class="fee-strip__label">durée moyenne d'un bateau mal évalué sur le marché — le prix réel, lui, se trouve en quelques clics</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider" aria-hidden="true"><span class="divider__mark"></span></div>
+
+<footer class="site-footer" id="comment-ca-marche">
+  <strong>Kriee</strong> — plateforme d'enchères nautiques entre particuliers, lancée dans le Sud de la France.
+  Comment ça marche : le vendeur dépose son lot avec un prix de réserve confidentiel · le lot passe en direct à date fixe ·
+  chaque enchère au-delà du prix de réserve prolonge la clôture de 3 minutes · un acheteur ne peut être en tête que sur un seul bateau à la fois (l'accastillage reste libre) ·
+  l'acheteur règle le prix marteau + 18% de frais + TVA sur ces frais ·
+  le vendeur est payé au prix marteau, sans retenue.
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase-client.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
