@@ -4,12 +4,20 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title id="page-title">Lot — Kriee</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
 <header class="site-header">
-  <a href="index.html" class="brand">Kri<span style="color:var(--buoy)">ee</span>
+  <a href="index.html" class="brand">
+    <svg class="brand__mark" width="24" height="26" viewBox="0 0 24 26" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <line x1="5" y1="1" x2="5" y2="25" stroke="#0E2233" stroke-width="2"/>
+      <path d="M5 3 L21 8.5 L5 14 Z" fill="#C7401F"/>
+    </svg>
+    <span class="brand__word">Kri<span style="color:var(--buoy)">ee</span></span>
     <span class="brand__sub">SUD DE LA FRANCE</span>
   </a>
   <nav class="site-nav">
@@ -25,6 +33,9 @@
     <h1 id="lot-title">Chargement du lot…</h1>
     <p id="lot-region" style="color:#5A6772;"></p>
     <table class="spec-table" id="lot-specs"></table>
+
+    <div class="spec-tabs" role="tablist" id="spec-tabs"></div>
+    <div id="spec-panels"></div>
     <div>
       <h3 style="font-family:var(--font-display); font-weight:500;">Description</h3>
       <p id="lot-description"></p>
