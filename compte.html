@@ -220,7 +220,7 @@
     <h2>Mes enchères</h2>
     <table class="account-table" id="my-bids-table">
       <thead>
-        <tr><th></th><th>Lot</th><th>Ma dernière enchère</th><th>Enchère actuelle</th><th>Statut</th><th></th></tr>
+        <tr><th></th><th>Lot</th><th>Ma dernière enchère</th><th>Ton plafond</th><th>Enchère actuelle</th><th>Statut</th><th></th></tr>
       </thead>
       <tbody id="my-bids-rows"></tbody>
     </table>
@@ -341,7 +341,7 @@ async function loadMyLots(userId) {
 async function loadMyBids(userId) {
   const { data, error } = await supabaseClient
     .from('bids')
-    .select('lot_id, amount, created_at, lots(id, title, current_price, ends_at, status, cover_image_url, region)')
+    .select('lot_id, amount, max_auto_amount, created_at, lots(id, title, current_price, ends_at, status, cover_image_url, region, leading_bidder_id)')
     .eq('bidder_id', userId)
     .order('amount', { ascending: false });
 
@@ -363,7 +363,7 @@ async function loadMyBids(userId) {
     const lot = b.lots;
     if (!lot) return '';
     const closed = lot.status !== 'live';
-    const leading = !closed && lot.current_price === b.amount;
+    const leading = !closed && lot.leading_bidder_id === userId;
     const statusLabel = closed ? (lot.status === 'sold' ? 'Clôturé — vendu' : 'Clôturé') : (leading ? 'En tête' : 'Dépassé');
     const statusClass = closed ? 'bid-status--closed' : (leading ? 'bid-status--leading' : 'bid-status--outbid');
     return `
@@ -371,6 +371,7 @@ async function loadMyBids(userId) {
       <td>${lot.cover_image_url ? `<img src="${lot.cover_image_url}">` : ''}</td>
       <td><strong>${lot.title}</strong><br><span style="color:#5A6772; font-size:0.8rem;">${lot.region}</span></td>
       <td>${formatEUR(b.amount)}</td>
+      <td><strong>${formatEUR(b.max_auto_amount)}</strong></td>
       <td>${formatEUR(lot.current_price)}</td>
       <td><span class="bid-status ${statusClass}">${statusLabel}</span></td>
       <td><a href="lot.html?id=${lot.id}" class="btn btn--ghost btn--sm" style="padding:0.35rem 0.7rem; font-size:0.78rem; text-decoration:none;">Voir</a></td>
