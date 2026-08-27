@@ -2,25 +2,25 @@
 const DEMO_LOTS = [
   {
     id: 'demo-1', title: 'Voilier CNSO Samouraï Mk2 — 1979', category_flag: 'V', category_slug: 'voile',
-    region: 'Var — Saint-Mandrier-sur-Mer', current_price: 8200, bid_increment: 200,
+    region: 'PACA', port_location: 'Saint-Mandrier-sur-Mer', current_price: 8200, bid_increment: 200,
     ends_at: new Date(Date.now() + 1000 * 60 * 42).toISOString(), image: 'linear-gradient(135deg,#2C6E8E,#0E2233)',
     view_count: 748, favorite_count: 34,
   },
   {
     id: 'demo-2', title: 'Semi-rigide 5,20m + moteur Yamaha 60cv', category_flag: 'S', category_slug: 'semi-rigide',
-    region: 'Bouches-du-Rhône — La Ciotat', current_price: 4100, bid_increment: 100,
+    region: 'PACA', port_location: 'La Ciotat', current_price: 4100, bid_increment: 100,
     ends_at: new Date(Date.now() + 1000 * 60 * 60 * 5).toISOString(), image: 'linear-gradient(135deg,#B8935A,#0E2233)',
     view_count: 312, favorite_count: 12,
   },
   {
     id: 'demo-3', title: 'Winchs Harken + jeu de voiles First 30', category_flag: 'E', category_slug: 'equipement',
-    region: 'Hérault — Sète', current_price: 650, bid_increment: 25,
+    region: 'Occitanie', port_location: 'Sète', current_price: 650, bid_increment: 25,
     ends_at: new Date(Date.now() + 1000 * 60 * 60 * 22).toISOString(), image: 'linear-gradient(135deg,#C7401F,#0E2233)',
     view_count: 156, favorite_count: 5,
   },
   {
     id: 'demo-4', title: 'Vedette Bénéteau Antares 6 — moteur inboard révisé', category_flag: 'M', category_slug: 'moteur',
-    region: 'Var — Toulon', current_price: 15600, bid_increment: 300,
+    region: 'PACA', port_location: 'Toulon', current_price: 15600, bid_increment: 300,
     ends_at: new Date(Date.now() + 1000 * 60 * 60 * 3).toISOString(), image: 'linear-gradient(135deg,#2C6E8E,#0E2233)',
     view_count: 521, favorite_count: 28,
   },
@@ -28,6 +28,7 @@ const DEMO_LOTS = [
 
 let activeFilter = 'all';
 let activeRegion = 'all';
+let activeCity = 'all';
 let searchQuery = '';
 let sortBy = 'ending-soon';
 let userCoords = null; // { lat, lng } une fois la géolocalisation acceptée
@@ -94,6 +95,7 @@ async function loadLots() {
       category_flag: l.categories?.flag_code || '·',
       category_slug: l.categories?.slug || 'equipement',
       region: l.region,
+      port_location: l.port_location,
       current_price: l.current_price,
       bid_increment: l.bid_increment,
       ends_at: l.ends_at,
@@ -114,8 +116,17 @@ async function loadLots() {
 
 function render() {
   if (document.getElementById('ticker-track')) renderTicker();
+  if (document.getElementById('city-select')) populateCityFilter();
   if (document.getElementById('lots')) renderGrid();
   if (document.getElementById('trending-grid')) renderTrending();
+}
+
+function populateCityFilter() {
+  const select = document.getElementById('city-select');
+  const cities = [...new Set(lots.map(l => l.port_location).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'fr'));
+  const current = select.value;
+  select.innerHTML = '<option value="all">Toutes les villes</option>' + cities.map(c => `<option value="${c}">${c}</option>`).join('');
+  if (cities.includes(current)) select.value = current; // conserve la sélection si elle est toujours valide après un rechargement
 }
 
 function renderTicker() {
@@ -137,7 +148,7 @@ function lotCardHTML(l, opts = {}) {
       </div>
       <div class="lot-card__body">
         <h3 class="lot-card__title">${l.title}</h3>
-        <p class="lot-card__meta">${l.region}${dist !== null ? `<span class="lot-card__distance">≈ ${Math.round(dist)} km</span>` : ''}</p>
+        <p class="lot-card__meta">${l.port_location ? `${l.port_location} — ` : ''}${l.region}${dist !== null ? `<span class="lot-card__distance">≈ ${Math.round(dist)} km</span>` : ''}</p>
         <div class="lot-card__price-row">
           <span>
             <span class="lot-card__price-label">Enchère actuelle</span><br>
@@ -157,11 +168,14 @@ function renderGrid() {
   if (activeRegion !== 'all') {
     filtered = filtered.filter(l => l.region === activeRegion);
   }
+  if (activeCity !== 'all') {
+    filtered = filtered.filter(l => l.port_location === activeCity);
+  }
 
   if (searchQuery.trim()) {
     const q = searchQuery.trim().toLowerCase();
     filtered = filtered.filter(l =>
-      l.title.toLowerCase().includes(q) || l.region.toLowerCase().includes(q)
+      l.title.toLowerCase().includes(q) || l.region.toLowerCase().includes(q) || (l.port_location || '').toLowerCase().includes(q)
     );
   }
 
@@ -235,6 +249,14 @@ if (regionSelect) {
   });
 }
 
+const citySelect = document.getElementById('city-select');
+if (citySelect) {
+  citySelect.addEventListener('change', (e) => {
+    activeCity = e.target.value;
+    renderGrid();
+  });
+}
+
 const proximityBtn = document.getElementById('proximity-btn');
 if (proximityBtn) {
   proximityBtn.addEventListener('click', () => requestGeolocation());
@@ -245,11 +267,13 @@ if (resetBtn) {
   resetBtn.addEventListener('click', () => {
     activeFilter = 'all';
     activeRegion = 'all';
+    activeCity = 'all';
     searchQuery = '';
     sortBy = 'ending-soon';
     userCoords = null;
     document.getElementById('search-input').value = '';
     document.getElementById('region-select').value = 'all';
+    if (document.getElementById('city-select')) document.getElementById('city-select').value = 'all';
     document.getElementById('sort-select').value = 'ending-soon';
     document.querySelectorAll('.chip').forEach(c => c.setAttribute('aria-pressed', 'false'));
     document.querySelector('.chip[data-filter="all"]').setAttribute('aria-pressed', 'true');
