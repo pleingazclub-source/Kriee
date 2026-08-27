@@ -12,6 +12,12 @@
   .account-wrap { max-width: 1000px; margin: 0 auto; padding: 2rem; }
   .account-section { margin-bottom: 3rem; }
   .account-section h2 { font-family: var(--font-display); font-size: 1.3rem; margin-bottom: 1rem; }
+  .profile-card { border: 1px solid #E4DFD3; border-radius: 3px; padding: 1.3rem; margin-bottom: 1.2rem; }
+  .profile-card__title { font-family: var(--font-display); font-size: 1rem; font-weight: 500; margin: 0 0 1rem; }
+  .field label { display: block; font-size: 0.85rem; margin-bottom: 0.35rem; color: #5A6772; }
+  .field input, .field select { width: 100%; padding: 0.6rem; border: 1px solid #C9C2B2; border-radius: 3px; font-family: var(--font-body); font-size: 0.95rem; }
+  .field-row { display: flex; gap: 1rem; }
+  .field-row .field { flex: 1; }
   .account-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
   .account-table th { text-align: left; font-family: var(--font-data); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: #5A6772; padding: 0.6rem; border-bottom: 1px solid #C9C2B2; }
   .account-table td { padding: 0.7rem 0.6rem; border-bottom: 1px solid #E4DFD3; vertical-align: middle; }
@@ -72,31 +78,106 @@
 
   <section class="account-section">
     <h2>Mon profil</h2>
-    <p style="color:#5A6772; font-size:0.88rem; margin-bottom:1.2rem;">Le nom complet et le téléphone servent à identifier tes enchères/annonces côté équipe, et à échanger tes coordonnées avec l'autre partie une fois une vente confirmée. Le pseudo, lui, est ce que <strong>les autres utilisateurs voient</strong> (historique d'enchères, etc.) — ton nom réel n'est jamais affiché publiquement.</p>
-    <form id="profile-form" style="max-width:420px;">
-      <div class="field" style="margin-bottom:1rem;">
-        <label for="profile-email" style="display:block; font-size:0.85rem; margin-bottom:0.35rem; color:#5A6772;">Email</label>
-        <input type="email" id="profile-email" disabled style="width:100%; padding:0.6rem; border:1px solid #E4DFD3; border-radius:3px; background:var(--chalk); color:#5A6772;">
+    <p style="color:#5A6772; font-size:0.88rem; margin-bottom:1.5rem;">Le nom complet et le téléphone servent à identifier tes enchères/annonces côté équipe, et à échanger tes coordonnées avec l'autre partie une fois une vente confirmée. Le pseudo, lui, est ce que <strong>les autres utilisateurs voient</strong> — ton nom réel n'est jamais affiché publiquement.</p>
+
+    <form id="profile-form" style="max-width:520px;">
+
+      <div class="profile-card">
+        <p class="profile-card__title">Informations personnelles</p>
+        <div class="field" style="margin-bottom:1rem;">
+          <label for="profile-email">Email</label>
+          <input type="email" id="profile-email" disabled style="background:var(--chalk); color:#5A6772;">
+        </div>
+        <div class="field-row" style="margin-bottom:1rem;">
+          <div class="field">
+            <label for="profile-civility">Civilité</label>
+            <select id="profile-civility">
+              <option value=""></option>
+              <option>M.</option>
+              <option>Mme</option>
+              <option>Autre</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="profile-pseudo">Pseudo (public)</label>
+            <input type="text" id="profile-pseudo" placeholder="Ex. SkipperVar83">
+          </div>
+        </div>
+        <div class="field-row" style="margin-bottom:1rem;">
+          <div class="field">
+            <label for="profile-firstname">Prénom (privé)</label>
+            <input type="text" id="profile-firstname" placeholder="Soufiane">
+          </div>
+          <div class="field">
+            <label for="profile-lastname">Nom (privé)</label>
+            <input type="text" id="profile-lastname" placeholder="Vezie">
+          </div>
+        </div>
+        <div class="field" style="margin-bottom:0;">
+          <label for="profile-phone">Téléphone</label>
+          <input type="tel" id="profile-phone" placeholder="06 12 34 56 78">
+        </div>
       </div>
-      <div class="field" style="margin-bottom:1rem;">
-        <label for="profile-pseudo" style="display:block; font-size:0.85rem; margin-bottom:0.35rem; color:#5A6772;">Pseudo (visible publiquement)</label>
-        <input type="text" id="profile-pseudo" placeholder="Ex. SkipperVar83" style="width:100%; padding:0.6rem; border:1px solid #C9C2B2; border-radius:3px;">
+
+      <div class="profile-card">
+        <p class="profile-card__title">Adresse</p>
+        <div class="field-row" style="margin-bottom:1rem;">
+          <div class="field" style="flex:0 0 130px;">
+            <label for="profile-postal">Code postal</label>
+            <input type="text" id="profile-postal" placeholder="83000">
+          </div>
+          <div class="field">
+            <label for="profile-city">Ville</label>
+            <input type="text" id="profile-city" placeholder="Toulon">
+          </div>
+        </div>
+        <div class="field" style="margin-bottom:0;">
+          <label for="profile-address">Adresse</label>
+          <input type="text" id="profile-address" placeholder="12 rue de la Marine">
+        </div>
       </div>
-      <div class="field" style="margin-bottom:1rem;">
-        <label for="profile-name" style="display:block; font-size:0.85rem; margin-bottom:0.35rem; color:#5A6772;">Nom complet (privé, jamais public)</label>
-        <input type="text" id="profile-name" placeholder="Prénom Nom" style="width:100%; padding:0.6rem; border:1px solid #C9C2B2; border-radius:3px;">
+
+      <div class="profile-card">
+        <p class="profile-card__title">Informations professionnelles <span style="font-weight:400; color:#5A6772; font-size:0.78rem;">(facultatif — vendeurs pros uniquement)</span></p>
+        <div class="field" style="margin-bottom:1rem;">
+          <label for="profile-company">Nom de l'entreprise</label>
+          <input type="text" id="profile-company" placeholder="Ma société">
+        </div>
+        <div class="field-row" style="margin-bottom:0;">
+          <div class="field">
+            <label for="profile-vat">Numéro de TVA</label>
+            <input type="text" id="profile-vat" placeholder="FR12345678900">
+          </div>
+          <div class="field">
+            <label for="profile-website">Site web</label>
+            <input type="text" id="profile-website" placeholder="https://...">
+          </div>
+        </div>
       </div>
-      <div class="field" style="margin-bottom:1rem;">
-        <label for="profile-phone" style="display:block; font-size:0.85rem; margin-bottom:0.35rem; color:#5A6772;">Téléphone</label>
-        <input type="tel" id="profile-phone" placeholder="06 12 34 56 78" style="width:100%; padding:0.6rem; border:1px solid #C9C2B2; border-radius:3px;">
-      </div>
-      <div class="field" style="margin-bottom:1.2rem;">
-        <label for="profile-city" style="display:block; font-size:0.85rem; margin-bottom:0.35rem; color:#5A6772;">Ville</label>
-        <input type="text" id="profile-city" placeholder="Toulon" style="width:100%; padding:0.6rem; border:1px solid #C9C2B2; border-radius:3px;">
-      </div>
+
       <button type="submit" class="btn btn--primary btn--sm" style="padding:0.6rem 1.2rem;">Enregistrer</button>
       <p id="profile-feedback" style="font-size:0.85rem; margin-top:0.7rem;" role="status"></p>
     </form>
+
+    <div class="profile-card" style="max-width:420px; margin-top:1.5rem;">
+      <p class="profile-card__title">Sécurité — changer le mot de passe</p>
+      <form id="password-change-form">
+        <div class="field" style="margin-bottom:1rem;">
+          <label for="pw-current">Mot de passe actuel</label>
+          <input type="password" id="pw-current" required>
+        </div>
+        <div class="field" style="margin-bottom:1rem;">
+          <label for="pw-new">Nouveau mot de passe</label>
+          <input type="password" id="pw-new" required minlength="8">
+        </div>
+        <div class="field" style="margin-bottom:1.2rem;">
+          <label for="pw-confirm">Confirmer le nouveau mot de passe</label>
+          <input type="password" id="pw-confirm" required minlength="8">
+        </div>
+        <button type="submit" class="btn btn--ghost btn--sm" style="padding:0.6rem 1.2rem;">Mettre à jour le mot de passe</button>
+        <p id="password-feedback" style="font-size:0.85rem; margin-top:0.7rem;" role="status"></p>
+      </form>
+    </div>
   </section>
 
   <section class="account-section">
@@ -393,15 +474,26 @@ async function loadMyProfile(user) {
 
   const { data, error } = await supabaseClient
     .from('profiles')
-    .select('full_name, phone, city, pseudo')
+    .select('full_name, phone, city, pseudo, civility, postal_code, address, company_name, vat_number, company_website')
     .eq('id', user.id)
     .single();
 
   if (error || !data) return; // profil pas encore créé par le trigger, laisse les champs vides
-  document.getElementById('profile-name').value = data.full_name || '';
+
+  // full_name est stocké en un seul champ ; on le sépare juste pour l'affichage (premier mot = prénom)
+  const [firstname, ...rest] = (data.full_name || '').split(' ');
+  document.getElementById('profile-firstname').value = firstname || '';
+  document.getElementById('profile-lastname').value = rest.join(' ') || '';
+
   document.getElementById('profile-phone').value = data.phone || '';
   document.getElementById('profile-city').value = data.city || '';
   document.getElementById('profile-pseudo').value = data.pseudo || '';
+  document.getElementById('profile-civility').value = data.civility || '';
+  document.getElementById('profile-postal').value = data.postal_code || '';
+  document.getElementById('profile-address').value = data.address || '';
+  document.getElementById('profile-company').value = data.company_name || '';
+  document.getElementById('profile-vat').value = data.vat_number || '';
+  document.getElementById('profile-website').value = data.company_website || '';
 }
 
 document.getElementById('profile-form').addEventListener('submit', async (e) => {
@@ -409,11 +501,21 @@ document.getElementById('profile-form').addEventListener('submit', async (e) => 
   const feedback = document.getElementById('profile-feedback');
   const { data: { session } } = await supabaseClient.auth.getSession();
 
+  const firstname = document.getElementById('profile-firstname').value.trim();
+  const lastname = document.getElementById('profile-lastname').value.trim();
+  const fullName = [firstname, lastname].filter(Boolean).join(' ') || null;
+
   const { error } = await supabaseClient.from('profiles').update({
-    full_name: document.getElementById('profile-name').value.trim() || null,
+    full_name: fullName,
     phone: document.getElementById('profile-phone').value.trim() || null,
     city: document.getElementById('profile-city').value.trim() || null,
     pseudo: document.getElementById('profile-pseudo').value.trim() || null,
+    civility: document.getElementById('profile-civility').value || null,
+    postal_code: document.getElementById('profile-postal').value.trim() || null,
+    address: document.getElementById('profile-address').value.trim() || null,
+    company_name: document.getElementById('profile-company').value.trim() || null,
+    vat_number: document.getElementById('profile-vat').value.trim() || null,
+    company_website: document.getElementById('profile-website').value.trim() || null,
   }).eq('id', session.user.id);
 
   if (error) {
@@ -424,6 +526,46 @@ document.getElementById('profile-form').addEventListener('submit', async (e) => 
   } else {
     feedback.textContent = 'Profil enregistré.';
     feedback.style.color = 'var(--mistral)';
+  }
+});
+
+document.getElementById('password-change-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const feedback = document.getElementById('password-feedback');
+  const current = document.getElementById('pw-current').value;
+  const newPw = document.getElementById('pw-new').value;
+  const confirm = document.getElementById('pw-confirm').value;
+
+  if (newPw !== confirm) {
+    feedback.textContent = 'Les deux nouveaux mots de passe ne correspondent pas.';
+    feedback.style.color = 'var(--buoy)';
+    return;
+  }
+
+  const { data: { session } } = await supabaseClient.auth.getSession();
+
+  // Réauthentification avec l'ancien mot de passe avant d'accepter le changement —
+  // évite qu'une session restée ouverte sur un appareil partagé permette de changer
+  // le mot de passe sans le connaître.
+  const { error: reauthError } = await supabaseClient.auth.signInWithPassword({
+    email: session.user.email,
+    password: current,
+  });
+
+  if (reauthError) {
+    feedback.textContent = 'Mot de passe actuel incorrect.';
+    feedback.style.color = 'var(--buoy)';
+    return;
+  }
+
+  const { error } = await supabaseClient.auth.updateUser({ password: newPw });
+  if (error) {
+    feedback.textContent = 'Erreur : ' + error.message;
+    feedback.style.color = 'var(--buoy)';
+  } else {
+    feedback.textContent = 'Mot de passe mis à jour.';
+    feedback.style.color = 'var(--mistral)';
+    e.target.reset();
   }
 });
 
