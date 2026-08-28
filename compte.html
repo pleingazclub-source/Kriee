@@ -24,6 +24,7 @@
   .account-table img { width: 46px; height: 46px; object-fit: cover; border-radius: 3px; }
   .bid-status { font-family: var(--font-data); font-size: 0.72rem; padding: 0.2rem 0.55rem; border-radius: 999px; }
   .bid-status--leading { background: #DCEFE3; color: #1D6B3E; }
+  .bid-status--won { background: #1D6B3E; color: #FBFAF7; font-weight: 600; }
   .bid-status--outbid { background: #F6DCD8; color: var(--buoy); }
   .bid-status--closed { background: #F1EEE6; color: #5A6772; }
   .empty-state { color: #5A6772; font-size: 0.9rem; padding: 1rem 0; }
@@ -394,9 +395,25 @@ async function loadMyBids(userId) {
     const lot = b.lots;
     if (!lot) return '';
     const closed = lot.status !== 'live';
+    const won = closed && lot.status === 'sold' && lot.leading_bidder_id === userId;
     const leading = !closed && lot.leading_bidder_id === userId;
-    const statusLabel = closed ? (lot.status === 'sold' ? 'Clôturé — vendu' : 'Clôturé') : (leading ? 'En tête' : 'Dépassé');
-    const statusClass = closed ? 'bid-status--closed' : (leading ? 'bid-status--leading' : 'bid-status--outbid');
+    let statusLabel, statusClass;
+    if (won) {
+      statusLabel = 'Enchère gagnée';
+      statusClass = 'bid-status--won';
+    } else if (closed && lot.status === 'sold') {
+      statusLabel = 'Non remportée';
+      statusClass = 'bid-status--closed';
+    } else if (closed && lot.status === 'unsold') {
+      statusLabel = 'Clôturé — invendu';
+      statusClass = 'bid-status--closed';
+    } else if (closed) {
+      statusLabel = 'Clôturé';
+      statusClass = 'bid-status--closed';
+    } else {
+      statusLabel = leading ? 'En tête' : 'Dépassé';
+      statusClass = leading ? 'bid-status--leading' : 'bid-status--outbid';
+    }
     return `
     <tr>
       <td>${lot.cover_image_url ? `<img src="${lot.cover_image_url}">` : ''}</td>
