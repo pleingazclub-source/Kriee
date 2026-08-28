@@ -117,13 +117,25 @@ function renderLot() {
   });
 }
 
+let galleryKeydownHandler = null;
+
 function renderGallery(l) {
   const media = document.getElementById('lot-media');
   const thumbs = document.getElementById('lot-thumbs');
   const images = l.images && l.images.length ? l.images : (l.cover_image_url ? [l.cover_image_url] : []);
+  let currentIndex = 0;
+
+  function showPhoto(i) {
+    if (!images.length) return;
+    currentIndex = (i + images.length) % images.length; // boucle des deux côtés
+    media.style.backgroundImage = `url('${images[currentIndex]}')`;
+    media.style.backgroundSize = 'cover';
+    media.style.backgroundPosition = 'center';
+    thumbs.querySelectorAll('img').forEach((img, idx) => img.classList.toggle('active', idx === currentIndex));
+  }
 
   if (images.length) {
-    media.style.backgroundImage = `url('${images[0]}')`;
+    showPhoto(0);
   } else {
     media.style.backgroundImage = l.image || 'linear-gradient(135deg,#2C6E8E,#0E2233)';
   }
@@ -131,15 +143,27 @@ function renderGallery(l) {
   media.style.backgroundPosition = 'center';
 
   thumbs.innerHTML = images.map((url, i) => `<img src="${url}" class="${i === 0 ? 'active' : ''}" data-url="${url}">`).join('');
-  thumbs.querySelectorAll('img').forEach(img => {
-    img.addEventListener('click', () => {
-      media.style.backgroundImage = `url('${img.dataset.url}')`;
-      media.style.backgroundSize = 'cover';
-      media.style.backgroundPosition = 'center';
-      thumbs.querySelectorAll('img').forEach(i => i.classList.remove('active'));
-      img.classList.add('active');
-    });
+  thumbs.querySelectorAll('img').forEach((img, i) => {
+    img.addEventListener('click', () => showPhoto(i));
   });
+
+  // Navigation gauche/droite sur la photo principale — masquée s'il n'y a qu'une seule photo (ou aucune)
+  const prevBtn = document.getElementById('photo-prev');
+  const nextBtn = document.getElementById('photo-next');
+  const showNav = images.length > 1;
+  prevBtn.style.display = showNav ? 'flex' : 'none';
+  nextBtn.style.display = showNav ? 'flex' : 'none';
+  prevBtn.onclick = () => showPhoto(currentIndex - 1);
+  nextBtn.onclick = () => showPhoto(currentIndex + 1);
+
+  // Navigation au clavier (flèches gauche/droite) — un seul listener actif à la fois, y compris
+  // au fil des re-rendus temps réel (sinon les anciens s'accumulent silencieusement).
+  if (galleryKeydownHandler) document.removeEventListener('keydown', galleryKeydownHandler);
+  galleryKeydownHandler = (e) => {
+    if (e.key === 'ArrowLeft') showPhoto(currentIndex - 1);
+    if (e.key === 'ArrowRight') showPhoto(currentIndex + 1);
+  };
+  if (showNav) document.addEventListener('keydown', galleryKeydownHandler);
 
   const videoWrap = document.getElementById('lot-video-wrap');
   videoWrap.innerHTML = l.video_url ? `<video src="${l.video_url}" controls></video>` : '';
