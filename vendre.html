@@ -351,7 +351,7 @@ function renderTabs() {
     const done = i < stepIndex ? ' spec-tab--done' : '';
     return `<button type="button" class="spec-tab${done}" data-goto="${i}" aria-selected="${i === stepIndex}">${i + 1}. ${STEP_LABELS[s]}</button>`;
   }).join('');
-  tabs.querySelectorAll('.spec-tab').forEach(t => t.addEventListener('click', () => goToStep(Number(t.dataset.goto))));
+  tabs.querySelectorAll('.spec-tab').forEach(t => t.addEventListener('click', () => attemptGoToStep(Number(t.dataset.goto))));
 }
 
 function showStep() {
@@ -369,6 +369,24 @@ function showStep() {
 }
 
 function goToStep(i) { stepIndex = i; showStep(); }
+
+// Valide chaque étape entre l'étape courante et la cible avant d'autoriser un saut en avant
+// (ex. clic direct sur l'onglet "Récapitulatif") — sans ça, les champs requis des étapes
+// sautées (comme la ville) ne sont jamais vérifiés : une étape masquée en display:none exclut
+// ses champs de la validation native du navigateur au moment du submit.
+function attemptGoToStep(target) {
+  const steps = currentSteps();
+  for (let i = stepIndex; i < target; i++) {
+    const panel = document.querySelector(`.spec-panel[data-step="${steps[i]}"]`);
+    const invalidField = panel.querySelector(':invalid');
+    if (invalidField) {
+      stepIndex = i; showStep();
+      invalidField.reportValidity();
+      return;
+    }
+  }
+  goToStep(target);
+}
 
 document.getElementById('wizard-next').addEventListener('click', () => {
   const steps = currentSteps();
@@ -686,6 +704,20 @@ async function checkProfileCompleteForSelling() {
 
 document.getElementById('sell-form').addEventListener('submit', async (e) => {
   e.preventDefault();
+
+  // Filet de sécurité : revalide toutes les étapes jusqu'au récapitulatif, au cas où le formulaire
+  // serait soumis autrement qu'en cliquant sur "Suivant" (ex. touche Entrée dans un champ).
+  const steps = currentSteps();
+  for (let i = 0; i < steps.length - 1; i++) {
+    const panel = document.querySelector(`.spec-panel[data-step="${steps[i]}"]`);
+    const invalidField = panel.querySelector(':invalid');
+    if (invalidField) {
+      stepIndex = i; showStep();
+      invalidField.reportValidity();
+      return;
+    }
+  }
+
   const feedback = document.getElementById('sell-feedback');
   const isConfigured = !SUPABASE_URL.includes('TON-PROJET');
 
