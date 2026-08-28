@@ -599,5 +599,6 @@ a { color: inherit; }
   .lots-grid { grid-template-columns: 1fr; }
 
   .field-row { flex-direction: column; gap: 0; }
-  .admin-table { display: block; overflow-x: auto; white-space: nowrap; }
+  .admin-table, .account-table { display: block; overflow-x: auto; white-space: nowrap; }
+  .account-table .moderation-note { white-space: normal; }
 }
