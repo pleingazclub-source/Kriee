@@ -94,6 +94,7 @@ async function loadLots() {
       title: l.title,
       category_flag: l.categories?.flag_code || '·',
       category_slug: l.categories?.slug || 'equipement',
+      equipment_subtype: l.specs?.general?.["Type d'équipement"] || null,
       region: l.region,
       port_location: l.port_location,
       current_price: l.current_price,
@@ -163,7 +164,14 @@ function lotCardHTML(l, opts = {}) {
 
 function renderGrid() {
   const grid = document.getElementById('lots');
-  let filtered = activeFilter === 'all' ? lots : lots.filter(l => l.category_slug === activeFilter);
+  // "voile" et "moteur" remontent aussi les équipements dont le sous-type correspond
+  // (ex. un winch tagué "Voile / gréement" apparaît en filtrant "Voile", même si sa catégorie
+  // principale reste "equipement") — pas d'équivalent pour "semi-rigide", qui reste strict.
+  const equipmentSubtypeMatch = { voile: 'Voile / gréement', moteur: 'Moteur' };
+  let filtered = activeFilter === 'all' ? lots : lots.filter(l =>
+    l.category_slug === activeFilter ||
+    (equipmentSubtypeMatch[activeFilter] && l.category_slug === 'equipement' && l.equipment_subtype === equipmentSubtypeMatch[activeFilter])
+  );
 
   if (activeRegion !== 'all') {
     filtered = filtered.filter(l => l.region === activeRegion);
