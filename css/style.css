@@ -166,7 +166,7 @@ a { color: inherit; }
 
 /* ---------- Hero : le signal, pas un carrousel ---------- */
 .hero {
-  background: var(--ink) url('img/nautical-bg.svg') center / cover no-repeat;
+  background: var(--ink) url('../img/nautical-bg.svg') center / cover no-repeat;
   color: var(--foam);
   padding: 4.5rem 2rem 3.5rem;
   position: relative;
@@ -222,7 +222,7 @@ a { color: inherit; }
 
 /* ---------- Bandeau de page (identité navy réutilisée sur toutes les pages secondaires) ---------- */
 .page-band {
-  background: var(--ink) url('img/nautical-bg.svg') center / cover no-repeat;
+  background: var(--ink) url('../img/nautical-bg.svg') center / cover no-repeat;
   color: var(--foam);
   padding: 2.2rem 2rem;
   position: relative;
@@ -247,7 +247,7 @@ a { color: inherit; }
 }
 .page-band--slim {
   padding: 1.1rem 2rem;
-  background-image: url('img/nautical-bg-slim.svg');
+  background-image: url('../img/nautical-bg-slim.svg');
 }
 .page-band__back {
   font-family: var(--font-data);
