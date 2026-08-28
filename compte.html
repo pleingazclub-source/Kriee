@@ -629,13 +629,17 @@ document.querySelectorAll('#account-tabs .spec-tab').forEach(tab => {
   });
 });
 
-// Ouvre directement l'onglet "Mon activité" si on arrive via compte.html#activite
-if (location.hash === '#activite') {
-  document.querySelectorAll('#account-tabs .spec-tab').forEach(t => t.setAttribute('aria-selected', 'false'));
-  document.querySelector('#account-tabs .spec-tab[data-tab="activite"]').setAttribute('aria-selected', 'true');
-  document.querySelectorAll('.account-wrap > .spec-panel').forEach(p => p.classList.remove('active'));
-  document.querySelector('.spec-panel[data-panel="activite"]').classList.add('active');
+// Ouvre l'onglet correspondant au #hash de l'URL (ex. compte.html#activite).
+// Appelée au chargement ET à chaque changement de hash — car si on est déjà sur compte.html,
+// cliquer sur un lien du type "compte.html#activite" ne recharge pas la page : seul le hash change,
+// donc il faut écouter 'hashchange' pour que le clic sur "Mon activité" depuis le menu ait un effet.
+function applyTabFromHash() {
+  const tabName = location.hash === '#activite' ? 'activite' : 'profil';
+  document.querySelectorAll('#account-tabs .spec-tab').forEach(t => t.setAttribute('aria-selected', String(t.dataset.tab === tabName)));
+  document.querySelectorAll('.account-wrap > .spec-panel').forEach(p => p.classList.toggle('active', p.dataset.panel === tabName));
 }
+applyTabFromHash();
+window.addEventListener('hashchange', applyTabFromHash);
 
 init();
 </script>
