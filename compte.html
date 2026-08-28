@@ -206,6 +206,18 @@
     </div>
   </section>
 
+  <section class="account-section">
+    <h2>Notifications</h2>
+    <p style="color:#5A6772; font-size:0.88rem; margin-bottom:1.2rem;">Reçois une alerte quand tu es dépassé sur une enchère, quand tu en remportes une, ou quand un de tes lots est validé, refusé ou vendu.</p>
+    <label style="display:flex; align-items:center; gap:0.6rem; margin-bottom:0.8rem; cursor:pointer;">
+      <input type="checkbox" id="notif-email-toggle"> Par email
+    </label>
+    <label style="display:flex; align-items:center; gap:0.6rem; margin-bottom:1rem; cursor:pointer;">
+      <input type="checkbox" id="notif-push-toggle"> Par notification push (navigateur/mobile)
+    </label>
+    <p id="notif-feedback" style="font-size:0.85rem;" role="status"></p>
+  </section>
+
   </div>
 
   <div class="spec-panel" data-panel="activite">
@@ -256,6 +268,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/supabase-client.js"></script>
 <script src="js/auth.js"></script>
+<script src="js/push.js"></script>
 <script>
 async function init() {
   const { data: { session } } = await supabaseClient.auth.getSession();
@@ -265,6 +278,7 @@ async function init() {
   }
   document.getElementById('account-content').style.display = 'block';
   loadMyProfile(session.user);
+  initNotificationPrefs(session.user.id);
   // Attend les 4 sections (pas seulement achats) avant de scroller — sinon une table encore en
   // cours de chargement grandit après coup et le scroll atterrit trop court, avant la cible réelle.
   await Promise.all([
@@ -276,6 +290,52 @@ async function init() {
   if (location.hash === '#achats') {
     document.getElementById('mes-achats-finaliser')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
+}
+
+// ---------- Préférences de notifications (email + push web) ----------
+async function initNotificationPrefs(userId) {
+  const emailToggle = document.getElementById('notif-email-toggle');
+  const pushToggle = document.getElementById('notif-push-toggle');
+  const feedback = document.getElementById('notif-feedback');
+
+  const { data: prefs } = await supabaseClient.from('notification_preferences').select('*').eq('user_id', userId).maybeSingle();
+  emailToggle.checked = prefs?.email_enabled ?? true;
+
+  // La case push ne reflète pas seulement la préférence en base, mais aussi si CE navigateur
+  // a effectivement un abonnement actif — les deux doivent être vrais pour recevoir des push ici.
+  let hasActiveSubscription = false;
+  if ('serviceWorker' in navigator) {
+    const registration = await navigator.serviceWorker.getRegistration('/sw.js');
+    const sub = await registration?.pushManager.getSubscription();
+    hasActiveSubscription = !!sub;
+  }
+  pushToggle.checked = (prefs?.push_enabled ?? true) && hasActiveSubscription;
+
+  async function upsertPrefs(patch) {
+    const { error } = await supabaseClient.from('notification_preferences').upsert({ user_id: userId, ...patch }, { onConflict: 'user_id' });
+    if (error) { feedback.textContent = 'Erreur : ' + error.message; feedback.style.color = 'var(--buoy)'; }
+  }
+
+  emailToggle.addEventListener('change', () => upsertPrefs({ email_enabled: emailToggle.checked }));
+
+  pushToggle.addEventListener('change', async () => {
+    feedback.textContent = '';
+    if (pushToggle.checked) {
+      try {
+        await subscribeToPush(userId);
+        await upsertPrefs({ push_enabled: true });
+        feedback.textContent = 'Notifications push activées.';
+        feedback.style.color = 'var(--mistral)';
+      } catch (err) {
+        pushToggle.checked = false;
+        feedback.textContent = err.message;
+        feedback.style.color = 'var(--buoy)';
+      }
+    } else {
+      await unsubscribeFromPush(userId);
+      await upsertPrefs({ push_enabled: false });
+    }
+  });
 }
 
 async function loadMyFavorites(userId) {
