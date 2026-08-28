@@ -359,7 +359,7 @@ async function loadMyLots(userId) {
       <td>${formatEUR(l.current_price)}</td>
       <td><span class="status-pill status-pill--${statusPillClass(l)}" style="font-family:var(--font-data); font-size:0.7rem; padding:0.2rem 0.55rem; border-radius:999px; background:#F1EEE6; color:#5A6772;">${l.status}</span></td>
       <td style="white-space:nowrap;">
-        ${l.status === 'cancelled' ? `<a href="vendre.html?edit=${l.id}" class="btn btn--primary btn--sm" style="padding:0.35rem 0.7rem; font-size:0.78rem; text-decoration:none;">Corriger et resoumettre</a>` : ''}
+        ${l.status === 'cancelled' ? `<a href="vendre.html?edit=${l.id}" class="btn btn--primary btn--sm" style="padding:0.35rem 0.7rem; font-size:0.78rem; text-decoration:none;">Corriger et resoumettre</a> <button type="button" class="btn--danger btn--sm" data-delete-lot-id="${l.id}" style="padding:0.35rem 0.7rem; font-size:0.78rem;">Supprimer</button>` : ''}
         <a href="lot.html?id=${l.id}" class="btn btn--ghost btn--sm" style="padding:0.35rem 0.7rem; font-size:0.78rem; text-decoration:none;">Voir</a>
       </td>
     </tr>
@@ -470,6 +470,17 @@ function saleCardHTML(s, role) {
 }
 
 function wireSaleActions() {
+  document.querySelectorAll('button[data-delete-lot-id]').forEach(btn => {
+    btn.onclick = async () => {
+      if (!confirm('Supprimer définitivement ce lot ? Cette action est irréversible.')) return;
+      btn.disabled = true;
+      const { error } = await supabaseClient.from('lots').update({ status: 'deleted' }).eq('id', btn.dataset.deleteLotId);
+      if (error) { alert('Erreur : ' + error.message); btn.disabled = false; return; }
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      loadMyLots(session.user.id);
+    };
+  });
+
   document.querySelectorAll('button[data-relist-id]').forEach(btn => {
     btn.onclick = async () => {
       btn.disabled = true;
