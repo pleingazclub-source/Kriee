@@ -241,7 +241,7 @@
     <p class="empty-state" id="my-lots-empty" style="display:none;">Tu n'as encore déposé aucun lot.</p>
   </section>
 
-  <section class="account-section">
+  <section class="account-section" id="mes-achats-finaliser">
     <h2>Mes achats à finaliser</h2>
     <div id="my-purchases-list"></div>
     <p class="empty-state" id="my-purchases-empty" style="display:none;">Aucun achat à finaliser pour l'instant.</p>
@@ -657,14 +657,19 @@ document.querySelectorAll('#account-tabs .spec-tab').forEach(tab => {
   });
 });
 
-// Ouvre l'onglet correspondant au #hash de l'URL (ex. compte.html#activite).
+// Ouvre l'onglet correspondant au #hash de l'URL (ex. compte.html#activite, ou compte.html#achats
+// qui ouvre le même onglet Activité puis descend directement sur "Mes achats à finaliser" — utilisé
+// par le lien affiché sur la fiche lot une fois une enchère remportée).
 // Appelée au chargement ET à chaque changement de hash — car si on est déjà sur compte.html,
 // cliquer sur un lien du type "compte.html#activite" ne recharge pas la page : seul le hash change,
 // donc il faut écouter 'hashchange' pour que le clic sur "Mon activité" depuis le menu ait un effet.
 function applyTabFromHash() {
-  const tabName = location.hash === '#activite' ? 'activite' : 'profil';
+  const tabName = (location.hash === '#activite' || location.hash === '#achats') ? 'activite' : 'profil';
   document.querySelectorAll('#account-tabs .spec-tab').forEach(t => t.setAttribute('aria-selected', String(t.dataset.tab === tabName)));
   document.querySelectorAll('.account-wrap > .spec-panel').forEach(p => p.classList.toggle('active', p.dataset.panel === tabName));
+  if (location.hash === '#achats') {
+    document.getElementById('mes-achats-finaliser')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
 }
 applyTabFromHash();
 window.addEventListener('hashchange', applyTabFromHash);
