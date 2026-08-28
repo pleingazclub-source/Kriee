@@ -411,6 +411,22 @@ a { color: inherit; }
   padding: 0.35rem 0.7rem; border-radius: 999px;
 }
 
+/* ---------- Navigation gauche/droite entre les photos (fiche produit) ---------- */
+.photo-nav-zone {
+  position: absolute; top: 0; bottom: 0; width: 40%; z-index: 2;
+  background: none; border: none; cursor: pointer; padding: 0;
+  display: flex; align-items: center; opacity: 0; transition: opacity 0.15s ease;
+}
+.lot-detail__media:hover .photo-nav-zone { opacity: 1; }
+.photo-nav-zone--prev { left: 0; justify-content: flex-start; }
+.photo-nav-zone--next { right: 0; justify-content: flex-end; }
+.photo-nav-zone__arrow {
+  width: 36px; height: 36px; margin: 0 0.6rem; border-radius: 50%;
+  background: rgba(255,255,255,0.92); color: var(--ink);
+  display: flex; align-items: center; justify-content: center; font-size: 1.1rem;
+}
+.photo-nav-zone:disabled { display: none; }
+
 /* ---------- Cœur de favori flottant sur les vignettes (grille / tendances) ---------- */
 .card-heart {
   position: absolute; top: 0.7rem; right: 0.7rem; z-index: 2;
