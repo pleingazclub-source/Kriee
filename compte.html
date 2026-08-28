@@ -38,6 +38,8 @@
 
   .sale-card { border: 1px solid #E4DFD3; border-radius: var(--radius); padding: 1.2rem; margin-bottom: 1rem; }
   .sale-card__top { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap; }
+  .sale-card__top-left { display: flex; align-items: center; gap: 0.9rem; }
+  .sale-card__thumb { width: 64px; height: 64px; border-radius: 3px; object-fit: cover; flex-shrink: 0; background: var(--chalk); }
   .sale-card__title { font-family: var(--font-display); font-size: 1.05rem; margin: 0 0 0.2rem; }
   .sale-card__price { font-family: var(--font-data); font-size: 1.3rem; font-weight: 600; color: var(--buoy); }
   .sale-card__actions { display: flex; gap: 0.6rem; margin-top: 1rem; flex-wrap: wrap; }
@@ -266,7 +268,12 @@ async function init() {
   loadMyFavorites(session.user.id);
   loadMyBids(session.user.id);
   loadMyLots(session.user.id);
-  loadMyPurchases(session.user.id);
+  await loadMyPurchases(session.user.id);
+  // Le scroll vers "Mes achats à finaliser" (lien #achats depuis la fiche lot) n'a lieu qu'une
+  // fois le contenu réellement chargé — sinon la position visée bouge dès que la carte apparaît.
+  if (location.hash === '#achats') {
+    document.getElementById('mes-achats-finaliser')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
 }
 
 async function loadMyFavorites(userId) {
@@ -475,9 +482,12 @@ function saleCardHTML(s, role) {
   return `
     <div class="sale-card">
       <div class="sale-card__top">
-        <div>
-          <p class="sale-card__title">${lot?.title || 'Lot'}</p>
-          <span style="color:#5A6772; font-size:0.85rem;">${lot?.region || ''}</span>
+        <div class="sale-card__top-left">
+          ${lot?.cover_image_url ? `<img src="${lot.cover_image_url}" alt="" class="sale-card__thumb">` : ''}
+          <div>
+            <p class="sale-card__title">${lot?.title || 'Lot'}</p>
+            <span style="color:#5A6772; font-size:0.85rem;">${lot?.region || ''}</span>
+          </div>
         </div>
         <span class="sale-card__price">${formatEUR(role === 'seller' ? s.hammer_price : s.buyer_total_price)}</span>
       </div>
@@ -658,8 +668,8 @@ document.querySelectorAll('#account-tabs .spec-tab').forEach(tab => {
 });
 
 // Ouvre l'onglet correspondant au #hash de l'URL (ex. compte.html#activite, ou compte.html#achats
-// qui ouvre le même onglet Activité puis descend directement sur "Mes achats à finaliser" — utilisé
-// par le lien affiché sur la fiche lot une fois une enchère remportée).
+// qui ouvre le même onglet Activité — le scroll vers "Mes achats à finaliser" est géré séparément
+// dans init(), une fois le contenu réellement chargé, voir plus bas).
 // Appelée au chargement ET à chaque changement de hash — car si on est déjà sur compte.html,
 // cliquer sur un lien du type "compte.html#activite" ne recharge pas la page : seul le hash change,
 // donc il faut écouter 'hashchange' pour que le clic sur "Mon activité" depuis le menu ait un effet.
@@ -667,12 +677,16 @@ function applyTabFromHash() {
   const tabName = (location.hash === '#activite' || location.hash === '#achats') ? 'activite' : 'profil';
   document.querySelectorAll('#account-tabs .spec-tab').forEach(t => t.setAttribute('aria-selected', String(t.dataset.tab === tabName)));
   document.querySelectorAll('.account-wrap > .spec-panel').forEach(p => p.classList.toggle('active', p.dataset.panel === tabName));
+}
+applyTabFromHash();
+window.addEventListener('hashchange', () => {
+  applyTabFromHash();
+  // Contrairement au premier chargement (géré dans init(), une fois le contenu prêt), ici on est déjà
+  // sur la page et le contenu est déjà chargé — le scroll peut se faire immédiatement.
   if (location.hash === '#achats') {
     document.getElementById('mes-achats-finaliser')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
-}
-applyTabFromHash();
-window.addEventListener('hashchange', applyTabFromHash);
+});
 
 init();
 </script>
