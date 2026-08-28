@@ -1,107 +1,107 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Kriee — Ventes aux enchères de bateaux et équipement nautique, Sud de la France</title>
-<meta name="description" content="Enchères de voiliers, bateaux à moteur, semi-rigides et accastillage entre particuliers du Sud de la France. Vente sans frais vendeur.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap">
-<link rel="stylesheet" href="css/style.css">
-</head>
-<body>
+// Edge Function : initiate-payin
+// Rôle : quand l'acheteur clique "Payer", cette fonction demande à Lemonway une page de
+// paiement hébergée (WebKit) pour le montant total (prix marteau + frais), et renvoie son URL.
+// Le navigateur redirige l'acheteur dessus. Le vrai encaissement est confirmé plus tard
+// par le webhook (lemonway-webhook), jamais par ce fichier ni par le client.
+//
+// Structure alignée sur la doc réelle de Lemonway (POST /moneyins/card/webinit) au 28/08/2026 :
+// https://documentation.lemonway.com/reference/moneyins_cardwebinitpost
+//
+// ⚠️ À COMPLÉTER une fois le compte Lemonway actif (voir prérequis ci-dessous) :
+//   Secrets à définir dans Supabase (Project Settings > Edge Functions > Secrets) :
+//     LEMONWAY_BEARER_TOKEN  — jeton OAuth2 (valable 90 jours, généré depuis leur Dashboard :
+//                              Developers > API Keys, puis échangé contre un Bearer token —
+//                              voir https://documentation.lemonway.com/reference/authentication-oauth).
+//                              Pas de génération automatique ici : à renouveler manuellement tous les ~90 jours.
+//     LEMONWAY_API_BASE      — ex. https://sandbox-api.lemonway.fr/mb/<TON-ENV>/directkitrest/v2
+//                              (le segment <TON-ENV> est propre à ton compte, communiqué à l'onboarding)
+//     LEMONWAY_WEBKIT_BASE   — ex. https://sandbox-webkit.lemonway.fr/<TA-SOCIETE>/dev/
+//                              (fourni dans l'email d'onboarding Lemonway)
+//     LEMONWAY_WALLET_ID     — l'accountId du wallet Kriee qui reçoit l'argent (accountId ci-dessous)
 
-<div class="ticker" aria-label="Lots qui clôturent bientôt">
-  <div class="ticker__track" id="ticker-track">
-    <!-- rempli en JS -->
-  </div>
-</div>
+import { createClient } from 'jsr:@supabase/supabase-js@2';
 
-<header class="site-header">
-  <a href="index.html" class="brand">
-    <svg class="brand__mark" width="24" height="26" viewBox="0 0 24 26" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <line x1="5" y1="1" x2="5" y2="25" stroke="#0E2233" stroke-width="2"/>
-      <path d="M5 3 L21 8.5 L5 14 Z" fill="#C7401F"/>
-    </svg>
-    <span class="brand__word">Kri<span style="color:var(--buoy)">ee</span></span>
-    <span class="brand__sub">SUD DE LA FRANCE</span>
-  </a>
-  <nav class="site-nav">
-    <a href="encheres.html">Enchères en cours</a>
-    <a href="vendre.html">Vendre un bateau</a>
-    <a href="#comment-ca-marche">Comment ça marche</a>
-    <a href="#" class="btn btn--ghost" id="nav-login">Se connecter</a>
+Deno.serve(async (req) => {
+  try {
+    const { sale_id } = await req.json();
 
-    <div class="user-menu" id="user-menu" style="display:none;">
-      <button type="button" class="btn btn--ghost" id="user-menu-toggle">👤 <span id="user-menu-label"></span></button>
-      <div class="user-menu__dropdown" id="user-menu-dropdown">
-        <div class="user-menu__header">
-          <strong id="user-menu-name"></strong>
-          <span id="user-menu-email"></span>
-        </div>
-        <a href="compte.html">Mon profil</a>
-        <a href="compte.html#activite">Mon activité</a>
-        <a href="admin.html" id="user-menu-admin-link" style="display:none;">Modération</a>
-        <button type="button" id="user-menu-logout">Se déconnecter</button>
-      </div>
-    </div>
-  </nav>
-</header>
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    );
 
-<section class="hero">
-  <div class="hero__gust" aria-hidden="true"></div>
-  <div class="hero__inner">
-    <p class="hero__eyebrow">Toulon · Marseille · La Ciotat · Sète — extension Sud en cours</p>
-    <h1>Le vrai prix, pas l'annonce qui traîne.</h1>
-    <p class="hero__tagline">Pour ceux qui veulent vendre. <span style="color:var(--buoy)">Vraiment.</span></p>
-    <p>Votre attachement fixe un prix. Le marché en décide un autre — en direct, pas dans 587 jours.</p>
-    <div class="hero__actions">
-      <a href="encheres.html" class="btn btn--primary">Voir les enchères en cours</a>
-      <a href="vendre.html" class="btn btn--ghost" style="border-color:var(--foam); color:var(--foam)">Mettre un bateau en vente</a>
-    </div>
+    const authHeader = req.headers.get('Authorization');
+    const { data: { user } } = await supabase.auth.getUser(authHeader?.replace('Bearer ', ''));
+    if (!user) return new Response(JSON.stringify({ error: 'Non authentifié.' }), { status: 401 });
 
-    <div class="fee-strip">
-      <div class="fee-strip__item">
-        <span class="fee-strip__num">0%</span>
-        <span class="fee-strip__label">de frais pour le vendeur — vous touchez le prix marteau intégral</span>
-      </div>
-      <div class="fee-strip__item">
-        <span class="fee-strip__num">18%</span>
-        <span class="fee-strip__label">de frais de vente à la charge de l'acheteur (+ TVA 21% sur ces frais)</span>
-      </div>
-      <div class="fee-strip__item">
-        <span class="fee-strip__num">3 min</span>
-        <span class="fee-strip__label">de prolongation automatique en cas d'enchère de dernière minute</span>
-      </div>
-      <div class="fee-strip__item">
-        <span class="fee-strip__num">587 j.</span>
-        <span class="fee-strip__label">durée moyenne d'un bateau mal évalué sur le marché — le prix réel, lui, se trouve en quelques clics</span>
-      </div>
-    </div>
-  </div>
-</section>
+    const { data: sale, error } = await supabase
+      .from('sales')
+      .select('*')
+      .eq('id', sale_id)
+      .eq('buyer_id', user.id)
+      .single();
 
-<div class="divider" aria-hidden="true"><span class="divider__mark"></span></div>
+    if (error || !sale) {
+      return new Response(JSON.stringify({ error: "Vente introuvable ou tu n'es pas l'acheteur." }), { status: 404 });
+    }
+    if (sale.seller_accepted !== true) {
+      return new Response(JSON.stringify({ error: 'Le vendeur doit accepter la vente avant tout paiement.' }), { status: 400 });
+    }
 
-<section class="trending-section">
-  <p class="trending-section__title">🔥 Les plus suivis en ce moment</p>
-  <div id="trending-grid" class="lots-grid" style="padding:0;"></div>
-</section>
+    const bearerToken = Deno.env.get('LEMONWAY_BEARER_TOKEN');
+    const apiBase = Deno.env.get('LEMONWAY_API_BASE');
+    const webkitBase = Deno.env.get('LEMONWAY_WEBKIT_BASE');
+    const walletId = Deno.env.get('LEMONWAY_WALLET_ID');
 
-<div class="divider" aria-hidden="true"><span class="divider__mark"></span></div>
+    if (!bearerToken || !apiBase || !webkitBase || !walletId) {
+      return new Response(JSON.stringify({
+        error: "Paiement pas encore activé : secrets Lemonway manquants côté serveur (voir les TODO dans ce fichier).",
+      }), { status: 501, headers: { 'Content-Type': 'application/json' } });
+    }
 
-<footer class="site-footer" id="comment-ca-marche">
-  <strong>Kriee</strong> — plateforme d'enchères nautiques entre particuliers, lancée dans le Sud de la France.
-  Comment ça marche : le vendeur dépose son lot avec un prix de réserve confidentiel · le lot passe en direct à date fixe ·
-  chaque enchère au-delà du prix de réserve prolonge la clôture de 3 minutes · un acheteur ne peut être en tête que sur un seul bateau à la fois (l'accastillage reste libre) ·
-  l'acheteur règle le prix marteau + 18% de frais + TVA sur ces frais ·
-  le vendeur est payé au prix marteau, sans retenue.
-</footer>
+    // Montants en centimes, exigé par l'API Lemonway (totalAmount, commissionAmount)
+    const totalAmountCents = Math.round(sale.buyer_total_price * 100);
+    const commissionAmountCents = Math.round((sale.buyer_total_price - sale.hammer_price) * 100);
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/supabase-client.js"></script>
-<script src="js/auth.js"></script>
-<script src="js/app.js"></script>
-</body>
-</html>
+    const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || '0.0.0.0';
+
+    const lemonwayRes = await fetch(`${apiBase}/moneyins/card/webinit`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${bearerToken}`,
+        'Content-Type': 'application/json',
+        'PSU-IP-Address': clientIp, // obligatoire côté Lemonway
+      },
+      body: JSON.stringify({
+        accountId: walletId,
+        totalAmount: totalAmountCents,
+        commissionAmount: commissionAmountCents,
+        autoCommission: false, // sinon Lemonway remplace notre commission par la sienne
+        reference: sale_id, // permet de relier le paiement à la vente dans le webhook
+        label: 'Kriee — enchère nautique',
+        returnUrl: `https://kriee.vercel.app/compte.html?paiement=ok&sale=${sale_id}#activite`,
+        cancelUrl: `https://kriee.vercel.app/compte.html?paiement=annule&sale=${sale_id}#activite`,
+        errorUrl: `https://kriee.vercel.app/compte.html?paiement=erreur&sale=${sale_id}#activite`,
+      }),
+    });
+
+    if (!lemonwayRes.ok) {
+      const errText = await lemonwayRes.text();
+      return new Response(JSON.stringify({ error: `Erreur Lemonway : ${errText}` }), { status: 502 });
+    }
+
+    const lemonwayData = await lemonwayRes.json();
+    // La doc indique un MoneyInToken en retour ; le nom exact du champ JSON n'est pas confirmé
+    // dans la doc textuelle consultée — à vérifier sur un vrai appel sandbox avant mise en prod.
+    const token = lemonwayData.token || lemonwayData.moneyInToken || lemonwayData.MoneyInToken;
+
+    await supabase.from('sales').update({ payment_status: 'pending' }).eq('id', sale_id);
+
+    return new Response(JSON.stringify({
+      payment_url: `${webkitBase}${token}`,
+    }), { headers: { 'Content-Type': 'application/json' } });
+
+  } catch (err) {
+    return new Response(JSON.stringify({ error: err.message }), { status: 500 });
+  }
+});
