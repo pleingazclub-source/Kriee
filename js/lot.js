@@ -385,10 +385,17 @@ function tickClosingSequence() {
   } else if (diff <= 0 && !closingResolved) {
     closingResolved = true;
     panel.classList.remove('closing-tick');
-    if (hasInitializedClosing) { playGavel(); flashScreen(true); }
-    banner.style.display = 'flex';
     document.getElementById('bid-amount').disabled = true;
     document.querySelector('#bid-form button[type="submit"]').disabled = true;
+    if (hasInitializedClosing) {
+      // Clôture en direct sous les yeux de l'utilisateur : petite bannière festive temporaire,
+      // puis elle s'efface pour laisser voir le récapitulatif de prix et l'historique en dessous.
+      playGavel(); flashScreen(true);
+      banner.style.display = 'flex';
+      setTimeout(() => { banner.style.display = 'none'; }, 3000);
+    }
+    // Sinon (page chargée après coup, sur un lot déjà clôturé) : pas de bannière plein écran —
+    // le formulaire désactivé, le récap prix et l'historique restent visibles directement.
   } else if (diff > 3000) {
     panel.classList.remove('closing-tick');
   }
