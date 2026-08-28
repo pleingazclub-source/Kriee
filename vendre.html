@@ -124,9 +124,9 @@
       </div>
 
       <div class="field">
-        <label for="address">Adresse précise (facultatif)</label>
-        <input type="text" id="address" placeholder="Au minimum une ville — ex. Toulon, ou une adresse complète pour plus de précision">
-        <p class="hint" id="geocode-status" style="margin:0.4rem 0 0;">Une ville suffit déjà à situer le lot correctement. Une adresse complète (rue, code postal) affine encore le tri par proximité. Sans rien indiquer ici, on se rabat sur le port et la région ci-dessus (moins précis).</p>
+        <label for="address">Adresse précise</label>
+        <input type="text" id="address" required placeholder="Au minimum une ville — ex. Toulon, ou une adresse complète pour plus de précision">
+        <p class="hint" id="geocode-status" style="margin:0.4rem 0 0;">Une ville suffit déjà à situer le lot correctement pour le tri par proximité. Une adresse complète (rue, code postal) affine encore la précision.</p>
       </div>
 
       <div class="field-row">
@@ -632,6 +632,10 @@ async function initEditMode() {
   document.getElementById('title').value = lot.title;
   document.getElementById('region').value = lot.region;
   document.getElementById('port').value = lot.port_location || '';
+  // L'adresse précise saisie au dépôt n'est pas stockée en base (seules lat/lng le sont) —
+  // on préremplit avec le port comme point de départ pour ne pas bloquer la resoumission
+  // sur un champ obligatoire vide, le vendeur peut l'affiner s'il le souhaite.
+  document.getElementById('address').value = lot.port_location || '';
   document.getElementById('starting').value = lot.starting_price;
   document.getElementById('reserve').value = lot.reserve_price;
   document.getElementById('increment').value = lot.bid_increment;
