@@ -423,12 +423,16 @@ function checkOwnLot(userId) {
 
 // Tant que l'utilisateur est en tête, son plafond s'affiche en clair à la place du formulaire —
 // dès qu'il est dépassé, le formulaire (champ + case d'engagement) réapparaît automatiquement.
+// Une fois le lot clôturé et remporté, un lien renvoie directement vers la suite du process (compte.html).
 function checkLeadingStatus(userId) {
   const isLeading = currentLot && currentLot.leading_bidder_id === userId;
+  const won = isLeading && currentLot.status === 'sold';
   document.getElementById('bid-form-wrap').style.display = isLeading ? 'none' : 'block';
   const note = document.getElementById('own-ceiling-note');
   note.style.display = isLeading ? 'block' : 'none';
-  if (isLeading) {
+  if (won) {
+    note.innerHTML = `✓ <strong>Tu as remporté ce lot !</strong><br><a href="compte.html#achats" style="font-size:0.85rem; font-weight:600;">Finaliser mon achat →</a>`;
+  } else if (isLeading) {
     const hasHiddenCeiling = currentLot.leading_max_amount > currentLot.current_price;
     note.innerHTML = hasHiddenCeiling
       ? `✓ Tu es en tête. <strong>Ton plafond automatique : ${formatEUR(currentLot.leading_max_amount)}</strong><br><span style="font-size:0.78rem; font-weight:400; color:#1D6B3E;">On enchérit pour toi si quelqu'un te dépasse, jusqu'à ce montant.</span>`
