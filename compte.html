@@ -265,12 +265,14 @@ async function init() {
   }
   document.getElementById('account-content').style.display = 'block';
   loadMyProfile(session.user);
-  loadMyFavorites(session.user.id);
-  loadMyBids(session.user.id);
-  loadMyLots(session.user.id);
-  await loadMyPurchases(session.user.id);
-  // Le scroll vers "Mes achats à finaliser" (lien #achats depuis la fiche lot) n'a lieu qu'une
-  // fois le contenu réellement chargé — sinon la position visée bouge dès que la carte apparaît.
+  // Attend les 4 sections (pas seulement achats) avant de scroller — sinon une table encore en
+  // cours de chargement grandit après coup et le scroll atterrit trop court, avant la cible réelle.
+  await Promise.all([
+    loadMyFavorites(session.user.id),
+    loadMyBids(session.user.id),
+    loadMyLots(session.user.id),
+    loadMyPurchases(session.user.id),
+  ]);
   if (location.hash === '#achats') {
     document.getElementById('mes-achats-finaliser')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
