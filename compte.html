@@ -248,6 +248,11 @@
 
   <section class="account-section">
     <h2>Mes lots en vente</h2>
+    <div class="filters" role="group" aria-label="Filtrer mes lots" style="margin-bottom:1rem; padding:0;">
+      <button class="chip" data-lots-filter="active" aria-pressed="true">En cours</button>
+      <button class="chip" data-lots-filter="archived" aria-pressed="false">Terminés</button>
+      <button class="chip" data-lots-filter="all" aria-pressed="false">Tous</button>
+    </div>
     <table class="account-table" id="my-lots-table">
       <thead>
         <tr><th></th><th>Lot</th><th>Prix départ</th><th>Réserve</th><th>Enchère actuelle</th><th>Statut</th><th></th></tr>
@@ -371,6 +376,10 @@ function statusPillClass(l) {
   return { scheduled: 'draft', draft: 'draft', live: 'live', sold: 'sold', unsold: 'cancelled', cancelled: 'cancelled', deleted: 'cancelled' }[l.status] || 'draft';
 }
 
+let myLotsData = [];
+let myLotsSalesByLot = {};
+let myLotsFilter = 'active';
+
 async function loadMyLots(userId) {
   const { data, error } = await supabaseClient
     .from('lots')
@@ -382,16 +391,42 @@ async function loadMyLots(userId) {
     .from('sales')
     .select('*')
     .eq('seller_id', userId);
-  const salesByLot = {};
-  (salesData || []).forEach(s => { salesByLot[s.lot_id] = s; });
+  myLotsSalesByLot = {};
+  (salesData || []).forEach(s => { myLotsSalesByLot[s.lot_id] = s; });
 
+  if (error || !data) { myLotsData = []; renderMyLots(); return; }
+  myLotsData = data;
+  renderMyLots();
+}
+
+// "Terminés" regroupe ce qui n'appelle plus d'action de ta part : vendu, refusé/supprimé par la
+// modération, ou une vente déjà finalisée. "invendu" reste dans "En cours" tant qu'un "Remettre
+// en vente" est possible.
+const ARCHIVED_STATUSES = ['sold', 'cancelled', 'deleted'];
+
+document.querySelectorAll('button[data-lots-filter]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('button[data-lots-filter]').forEach(b => b.setAttribute('aria-pressed', 'false'));
+    btn.setAttribute('aria-pressed', 'true');
+    myLotsFilter = btn.dataset.lotsFilter;
+    renderMyLots();
+  });
+});
+
+function renderMyLots() {
   const rows = document.getElementById('my-lots-rows');
-  if (error || !data || data.length === 0) {
-    document.getElementById('my-lots-empty').style.display = 'block';
-    return;
-  }
+  const salesByLot = myLotsSalesByLot;
+  const filtered = myLotsFilter === 'all'
+    ? myLotsData
+    : myLotsData.filter(l => ARCHIVED_STATUSES.includes(l.status) === (myLotsFilter === 'archived'));
 
-  rows.innerHTML = data.map(l => {
+  document.getElementById('my-lots-empty').style.display = (myLotsData.length === 0 || filtered.length === 0) ? 'block' : 'none';
+  document.getElementById('my-lots-empty').textContent = myLotsData.length === 0
+    ? "Tu n'as encore déposé aucun lot."
+    : "Rien à afficher dans ce filtre.";
+  if (filtered.length === 0) { rows.innerHTML = ''; return; }
+
+  rows.innerHTML = filtered.map(l => {
     const sale = salesByLot[l.id];
     let saleActionHTML = '';
     if (sale && sale.status !== 'cancelled') {
