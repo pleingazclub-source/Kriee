@@ -19,6 +19,8 @@
   .field-row { display: flex; gap: 1rem; }
   .field-row .field { flex: 1; }
   .account-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+  .account-table tr.row-clickable:hover { background: var(--chalk); }
+  .account-table tr.row-clickable { cursor: pointer; }
   .account-table th { text-align: left; font-family: var(--font-data); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: #5A6772; padding: 0.6rem; border-bottom: 1px solid #C9C2B2; }
   .account-table td { padding: 0.7rem 0.6rem; border-bottom: 1px solid #E4DFD3; vertical-align: middle; }
   .account-table img { width: 46px; height: 46px; object-fit: cover; border-radius: 3px; }
@@ -354,7 +356,7 @@ async function loadMyFavorites(userId) {
   rows.innerHTML = data.filter(f => f.lots).map(f => {
     const l = f.lots;
     return `
-    <tr>
+    <tr class="row-clickable" onclick="if(!event.target.closest('a,button,input,label')) location.href='lot.html?id=${l.id}'">
       <td>${l.cover_image_url ? `<img src="${l.cover_image_url}">` : ''}</td>
       <td><strong>${l.title}</strong><br><span style="color:#5A6772; font-size:0.8rem;">${l.region}</span></td>
       <td>${formatEUR(l.current_price)}</td>
@@ -395,6 +397,22 @@ async function loadMyLots(userId) {
     if (sale && sale.status !== 'cancelled') {
       if (sale.status === 'confirmed') {
         saleActionHTML = `<button type="button" class="btn btn--ghost btn--sm" data-sale-reveal="${sale.id}" style="margin-top:0.4rem; display:block;">Voir les coordonnées</button>`;
+      } else if (sale.status === 'awaiting_expertise') {
+        if (l.expertise_status === 'pending') {
+          saleActionHTML = `<div style="background:var(--chalk); padding:0.7rem 0.9rem; border-radius:3px; font-size:0.78rem; margin-top:0.4rem;">Rapport envoyé, en attente de validation par Kriee — les coordonnées se débloqueront automatiquement une fois validé.</div>`;
+        } else {
+          const rejectedNote = l.expertise_status === 'rejected'
+            ? `<div class="moderation-note" style="margin-bottom:0.5rem;"><strong>Rapport refusé :</strong> ${l.expertise_moderation_note || ''}</div>`
+            : '';
+          saleActionHTML = `
+            ${rejectedNote}
+            <div style="background:var(--chalk); padding:0.7rem 0.9rem; border-radius:3px; font-size:0.78rem; margin-top:0.4rem;">
+              Rapport d'expertise requis (et validé par Kriee) avant de pouvoir accéder aux coordonnées de l'acheteur et finaliser la vente (obligatoire au-delà de 5000€ de prix de départ).
+            </div>
+            <input type="file" accept="application/pdf" class="expertise-upload-input" data-lot-id="${l.id}" style="margin-top:0.5rem; font-size:0.78rem;">
+            <button type="button" class="btn btn--primary btn--sm" data-expertise-upload="${l.id}" style="margin-top:0.4rem;">Envoyer le rapport</button>
+            <p class="expertise-upload-feedback" style="font-size:0.78rem; margin-top:0.3rem;"></p>`;
+        }
       } else if (sale.seller_accepted === null || sale.seller_accepted === undefined) {
         const reserveNote = l.current_price < l.reserve_price
           ? `<div style="font-size:0.72rem; color:#5A6772; margin-top:0.3rem;">Réserve non atteinte (manque ${formatEUR(l.reserve_price - l.current_price)}) — tu peux accepter quand même ou refuser.</div>`
@@ -413,7 +431,7 @@ async function loadMyLots(userId) {
       ? `<button type="button" class="btn btn--ghost btn--sm" data-relist-id="${l.id}" style="margin-top:0.4rem; padding:0.35rem 0.7rem; font-size:0.78rem;">Remettre en vente</button>`
       : '';
     return `
-    <tr>
+    <tr class="row-clickable" onclick="if(!event.target.closest('a,button,input,label')) location.href='lot.html?id=${l.id}'">
       <td>${l.cover_image_url ? `<img src="${l.cover_image_url}">` : ''}</td>
       <td>
         <strong>${l.title}</strong><br><span style="color:#5A6772; font-size:0.8rem;">${l.categories?.label || ''} — ${l.region}</span>
@@ -484,7 +502,7 @@ async function loadMyBids(userId) {
       statusClass = leading ? 'bid-status--leading' : 'bid-status--outbid';
     }
     return `
-    <tr>
+    <tr class="row-clickable" onclick="if(!event.target.closest('a,button,input,label')) location.href='lot.html?id=${lot.id}'">
       <td>${lot.cover_image_url ? `<img src="${lot.cover_image_url}">` : ''}</td>
       <td><strong>${lot.title}</strong><br><span style="color:#5A6772; font-size:0.8rem;">${lot.region}</span></td>
       <td>${formatEUR(b.amount)}</td>
@@ -559,6 +577,31 @@ function saleCardHTML(s, role) {
 }
 
 function wireSaleActions() {
+  document.querySelectorAll('button[data-expertise-upload]').forEach(btn => {
+    btn.onclick = async () => {
+      const lotId = btn.dataset.expertiseUpload;
+      const fileInput = document.querySelector(`.expertise-upload-input[data-lot-id="${lotId}"]`);
+      const feedback = fileInput.parentElement.querySelector('.expertise-upload-feedback');
+      const file = fileInput.files[0];
+      if (!file) { feedback.textContent = 'Choisis un fichier PDF.'; feedback.style.color = 'var(--buoy)'; return; }
+
+      btn.disabled = true;
+      feedback.textContent = 'Envoi en cours...';
+      feedback.style.color = 'var(--mistral)';
+      try {
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        const url = await uploadLotMedia(file, session.user.id);
+        const { error } = await supabaseClient.rpc('seller_upload_expertise', { p_lot_id: lotId, p_url: url });
+        if (error) throw error;
+        loadMyLots(session.user.id);
+      } catch (err) {
+        feedback.textContent = 'Erreur : ' + err.message;
+        feedback.style.color = 'var(--buoy)';
+        btn.disabled = false;
+      }
+    };
+  });
+
   document.querySelectorAll('button[data-delete-lot-id]').forEach(btn => {
     btn.onclick = async () => {
       if (!confirm('Supprimer définitivement ce lot ? Cette action est irréversible.')) return;
