@@ -173,6 +173,17 @@
 
   <div class="divider" aria-hidden="true" style="margin: 2.5rem auto;"><span class="divider__mark"></span></div>
 
+  <p class="revenue-dash__title" style="color:var(--ink); margin-bottom:1rem;">Rapports d'expertise à valider</p>
+  <table class="admin-table">
+    <thead>
+      <tr><th>Lot</th><th>Vendeur</th><th>Rapport</th><th>Actions</th></tr>
+    </thead>
+    <tbody id="expertise-rows"></tbody>
+  </table>
+  <p id="expertise-empty" style="color:#5A6772; padding:1rem 0; display:none;">Aucun rapport en attente de validation.</p>
+
+  <div class="divider" aria-hidden="true" style="margin: 2.5rem auto;"><span class="divider__mark"></span></div>
+
   <p class="revenue-dash__title" style="color:var(--ink); margin-bottom:1rem;">Utilisateurs</p>
   <input type="search" id="users-search" placeholder="Rechercher par nom ou pseudo..." style="width:100%; max-width:360px; padding:0.6rem 0.8rem; border:1px solid #C9C2B2; border-radius:3px; margin-bottom:1rem; font-family:var(--font-body); font-size:0.9rem;">
   <table class="admin-table">
@@ -268,6 +279,47 @@ async function loadLots() {
 }
 
 function isReserveMet(l) { return l.current_price >= l.reserve_price; }
+
+function renderExpertiseModeration() {
+  const pending = allLots.filter(l => l.expertise_status === 'pending');
+  const rows = document.getElementById('expertise-rows');
+  const empty = document.getElementById('expertise-empty');
+  empty.style.display = pending.length ? 'none' : 'block';
+
+  rows.innerHTML = pending.map(l => `
+    <tr>
+      <td><strong>${l.title}</strong><br><span style="color:#5A6772; font-size:0.8rem;">Prix de départ : ${formatEUR(l.starting_price)}</span></td>
+      <td>${l.profiles?.full_name || '—'}</td>
+      <td><a href="${l.expertise_report_url}" target="_blank" rel="noopener">📄 Voir le rapport</a></td>
+      <td>
+        <div style="display:flex; gap:0.4rem;">
+          <button class="btn btn--primary btn--sm" data-expertise-approve="${l.id}" style="padding:0.35rem 0.7rem; font-size:0.78rem;">Valider</button>
+          <button class="btn--danger btn--sm" data-expertise-reject="${l.id}" style="padding:0.35rem 0.7rem; font-size:0.78rem;">Refuser</button>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+
+  rows.querySelectorAll('button[data-expertise-approve]').forEach(btn => {
+    btn.onclick = async () => {
+      btn.disabled = true;
+      const { error } = await supabaseClient.rpc('admin_approve_expertise', { p_lot_id: btn.dataset.expertiseApprove });
+      if (error) { alert('Erreur : ' + error.message); btn.disabled = false; return; }
+      loadLots();
+    };
+  });
+
+  rows.querySelectorAll('button[data-expertise-reject]').forEach(btn => {
+    btn.onclick = async () => {
+      const note = prompt('Motif du refus (visible par le vendeur) :');
+      if (!note) return;
+      btn.disabled = true;
+      const { error } = await supabaseClient.rpc('admin_reject_expertise', { p_lot_id: btn.dataset.expertiseReject, p_note: note });
+      if (error) { alert('Erreur : ' + error.message); btn.disabled = false; return; }
+      loadLots();
+    };
+  });
+}
 function buyerFeeHT(l) { return l.current_price * 0.18; }
 
 function renderRevenueDashboard() {
@@ -296,6 +348,7 @@ function renderRevenueDashboard() {
 
 function render() {
   renderRevenueDashboard();
+  renderExpertiseModeration();
 
   const rows = document.getElementById('admin-rows');
   let filtered = activeFilter === 'all' ? allLots : allLots.filter(l => l.status === activeFilter);
