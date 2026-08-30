@@ -9,24 +9,33 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap">
 <link rel="stylesheet" href="css/style.css">
 <style>
-  .auth-wrap { max-width: 420px; margin: 0 auto; padding: 3.5rem 2rem; }
-  .auth-wrap h1 { font-family: var(--font-display); font-size: 1.7rem; margin-bottom: 0.3rem; }
+  .auth-wrap { max-width: 400px; margin: 0 auto; padding: 3.5rem 2rem; }
   .auth-wrap p.lead { color: #5A6772; font-size: 0.92rem; margin-bottom: 1.8rem; }
-  .tabs { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; border-bottom: 1px solid #E4DFD3; }
-  .tab {
-    background: none; border: none; cursor: pointer; font-family: var(--font-body);
-    font-size: 0.9rem; padding: 0.6rem 0.2rem; margin-right: 1.2rem;
-    color: #5A6772; border-bottom: 2px solid transparent;
-  }
-  .tab[aria-selected="true"] { color: var(--ink); border-color: var(--buoy); font-weight: 600; }
   .field { margin-bottom: 1.1rem; }
   .field label { display: block; font-size: 0.85rem; margin-bottom: 0.35rem; color: #5A6772; }
   .field input {
     width: 100%; padding: 0.65rem; border: 1px solid #C9C2B2; border-radius: 3px;
     font-family: var(--font-body); font-size: 0.95rem;
   }
-  .panel { display: none; }
-  .panel.active { display: block; }
+  .field input:focus { outline: none; border-color: var(--mistral); box-shadow: 0 0 0 3px rgba(44,110,142,0.15); }
+
+  .password-field-wrap { position: relative; }
+  .password-field-wrap input { padding-right: 2.6rem; }
+  .password-toggle-btn {
+    position: absolute; right: 0.1rem; top: 50%; transform: translateY(-50%);
+    background: none; border: none; cursor: pointer; padding: 0.5rem 0.6rem;
+    font-size: 1rem; color: #5A6772; line-height: 1;
+  }
+  .password-toggle-btn:hover { color: var(--ink); }
+
+  .auth-switch {
+    display: block; width: 100%; text-align: center; margin-top: 1.2rem;
+    background: none; border: none; color: var(--mistral); text-decoration: underline;
+    cursor: pointer; font-size: 0.85rem; font-family: var(--font-body); padding: 0.4rem;
+  }
+  .auth-panel--secondary {
+    margin-top: 1.3rem; padding-top: 1.3rem; border-top: 1px solid #E4DFD3;
+  }
   .link-btn {
     background: none; border: none; color: var(--mistral); text-decoration: underline;
     cursor: pointer; font-size: 0.85rem; font-family: var(--font-body); padding: 0;
@@ -86,24 +95,19 @@
   <div id="auth-forms">
     <p class="lead">Nécessaire pour enchérir ou déposer un lot.</p>
 
-    <div class="tabs" role="tablist">
-      <button class="tab" id="tab-magic" role="tab" aria-selected="true">Connexion sans mot de passe</button>
-      <button class="tab" id="tab-password" role="tab" aria-selected="false">Email + mot de passe</button>
-    </div>
+    <!-- Chemin par défaut : un email suffit, pas de mot de passe à retenir. -->
+    <form id="magic-form">
+      <div class="field">
+        <label for="magic-email">Adresse email</label>
+        <input type="email" id="magic-email" required placeholder="toi@exemple.fr" autocomplete="email" name="email" autofocus>
+      </div>
+      <button type="submit" class="btn btn--primary" style="width:100%; padding:0.75rem;">Recevoir le lien de connexion</button>
+    </form>
 
-    <!-- Lien magique : pas de mot de passe, un email suffit -->
-    <div class="panel active" id="panel-magic">
-      <form id="magic-form">
-        <div class="field">
-          <label for="magic-email">Adresse email</label>
-          <input type="email" id="magic-email" required placeholder="toi@exemple.fr" autocomplete="email" name="email">
-        </div>
-        <button type="submit" class="btn btn--primary" style="width:100%; padding:0.75rem;">Recevoir le lien de connexion</button>
-      </form>
-    </div>
+    <button type="button" class="auth-switch" id="toggle-password-panel">Se connecter avec un mot de passe à la place</button>
 
-    <!-- Email + mot de passe : pratique pour les comptes créés manuellement dans Supabase -->
-    <div class="panel" id="panel-password">
+    <!-- Repliée par défaut — pour les comptes créés avec mot de passe, ou ceux qui préfèrent -->
+    <div class="auth-panel--secondary" id="panel-password" style="display:none;">
       <form id="password-form">
         <div class="field">
           <label for="pw-email">Adresse email</label>
@@ -111,11 +115,11 @@
         </div>
         <div class="field">
           <label for="pw-password">Mot de passe</label>
-          <div style="display:flex; gap:0.5rem;">
-            <input type="password" id="pw-password" required minlength="8" autocomplete="new-password" name="new-password" style="flex:1;">
-            <button type="button" id="generate-password-btn" class="btn btn--ghost" style="white-space:nowrap; padding:0.6rem 0.9rem; font-size:0.8rem;">Générer</button>
+          <div class="password-field-wrap">
+            <input type="password" id="pw-password" required minlength="8" autocomplete="new-password" name="new-password">
+            <button type="button" class="password-toggle-btn" id="pw-toggle" aria-label="Afficher le mot de passe" title="Afficher le mot de passe">👁</button>
           </div>
-          <p class="hint" style="font-size:0.74rem; margin:0.35rem 0 0;">Ton navigateur peut aussi te proposer et enregistrer un mot de passe fort automatiquement.</p>
+          <p class="hint" style="font-size:0.74rem; margin:0.35rem 0 0;">Ton navigateur peut te proposer et enregistrer un mot de passe fort automatiquement.</p>
         </div>
         <button type="submit" class="btn btn--primary" style="width:100%; padding:0.75rem;">Se connecter</button>
       </form>
@@ -153,25 +157,26 @@ document.getElementById('logout-btn').addEventListener('click', async () => {
   location.reload();
 });
 
-// Bascule entre les deux onglets
-const tabMagic = document.getElementById('tab-magic');
-const tabPassword = document.getElementById('tab-password');
-const panelMagic = document.getElementById('panel-magic');
+// Panneau mot de passe replié par défaut — divulgation progressive plutôt que deux onglets à
+// poids égal : la plupart des gens veulent juste se connecter vite, sans choisir une méthode
+// avant même de savoir laquelle les concerne.
+const togglePasswordBtn = document.getElementById('toggle-password-panel');
 const panelPassword = document.getElementById('panel-password');
-
-tabMagic.addEventListener('click', () => {
-  tabMagic.setAttribute('aria-selected', 'true');
-  tabPassword.setAttribute('aria-selected', 'false');
-  panelMagic.classList.add('active');
-  panelPassword.classList.remove('active');
+togglePasswordBtn.addEventListener('click', () => {
+  const isOpen = panelPassword.style.display !== 'none';
+  panelPassword.style.display = isOpen ? 'none' : 'block';
+  togglePasswordBtn.textContent = isOpen ? 'Se connecter avec un mot de passe à la place' : 'Revenir à la connexion sans mot de passe';
   setFeedback('', false);
+  if (!isOpen) document.getElementById('pw-email').focus();
 });
-tabPassword.addEventListener('click', () => {
-  tabPassword.setAttribute('aria-selected', 'true');
-  tabMagic.setAttribute('aria-selected', 'false');
-  panelPassword.classList.add('active');
-  panelMagic.classList.remove('active');
-  setFeedback('', false);
+
+// Afficher/masquer le mot de passe saisi — remplace l'ancien bouton "Générer", devenu inutile
+// puisque les navigateurs proposent déjà nativement un mot de passe fort à la création.
+document.getElementById('pw-toggle').addEventListener('click', () => {
+  const input = document.getElementById('pw-password');
+  const isHidden = input.type === 'password';
+  input.type = isHidden ? 'text' : 'password';
+  document.getElementById('pw-toggle').textContent = isHidden ? '🙈' : '👁';
 });
 
 // Lien magique
@@ -196,28 +201,6 @@ document.getElementById('password-form').addEventListener('submit', async (e) =>
   const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
   if (error) setFeedback(error.message, true);
   else location.href = 'index.html';
-});
-
-// Génère un mot de passe fort côté client — utile quand le gestionnaire du navigateur ne se déclenche pas.
-function generateStrongPassword(length = 16) {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%^&*';
-  const random = new Uint32Array(length);
-  crypto.getRandomValues(random);
-  return Array.from(random, n => chars[n % chars.length]).join('');
-}
-
-document.getElementById('generate-password-btn').addEventListener('click', async () => {
-  const password = generateStrongPassword();
-  const input = document.getElementById('pw-password');
-  input.type = 'text';
-  input.value = password;
-  try {
-    await navigator.clipboard.writeText(password);
-    setFeedback('Mot de passe généré et copié dans le presse-papiers — colle-le dans ton gestionnaire si besoin.', false);
-  } catch (err) {
-    setFeedback('Mot de passe généré (copie-le manuellement, le presse-papiers n\'est pas accessible ici).', false);
-  }
-  setTimeout(() => { input.type = 'password'; }, 5000);
 });
 
 // Créer un compte avec email + mot de passe (self-service)
