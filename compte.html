@@ -224,8 +224,14 @@
 
   <div class="spec-panel" data-panel="activite">
 
-  <section class="account-section">
-    <h2>Mes favoris</h2>
+  <div class="spec-tabs" role="tablist" id="activite-subtabs">
+    <button class="spec-tab" data-subtab="favoris" aria-selected="true">Mes favoris</button>
+    <button class="spec-tab" data-subtab="encheres" aria-selected="false">Mes enchères</button>
+    <button class="spec-tab" data-subtab="lots" aria-selected="false">Mes lots en vente</button>
+    <button class="spec-tab" data-subtab="achats" aria-selected="false">Mes achats</button>
+  </div>
+
+  <section class="spec-panel active" data-subpanel="favoris">
     <table class="account-table" id="my-favorites-table">
       <thead>
         <tr><th></th><th>Lot</th><th>Enchère actuelle</th><th>Statut</th><th></th></tr>
@@ -235,8 +241,7 @@
     <p class="empty-state" id="my-favorites-empty" style="display:none;">Tu n'as encore ajouté aucun lot à tes favoris.</p>
   </section>
 
-  <section class="account-section">
-    <h2>Mes enchères</h2>
+  <section class="spec-panel" data-subpanel="encheres">
     <table class="account-table" id="my-bids-table">
       <thead>
         <tr><th></th><th>Lot</th><th>Ma dernière enchère</th><th>Ton plafond</th><th>Enchère actuelle</th><th>Statut</th><th></th></tr>
@@ -246,8 +251,7 @@
     <p class="empty-state" id="my-bids-empty" style="display:none;">Tu n'as encore enchéri sur aucun lot.</p>
   </section>
 
-  <section class="account-section">
-    <h2>Mes lots en vente</h2>
+  <section class="spec-panel" data-subpanel="lots">
     <div class="filters" role="group" aria-label="Filtrer mes lots" style="margin-bottom:1rem; padding:0;">
       <button class="chip" data-lots-filter="active" aria-pressed="true">En cours</button>
       <button class="chip" data-lots-filter="archived" aria-pressed="false">Terminés</button>
@@ -262,8 +266,7 @@
     <p class="empty-state" id="my-lots-empty" style="display:none;">Tu n'as encore déposé aucun lot.</p>
   </section>
 
-  <section class="account-section" id="mes-achats-finaliser">
-    <h2>Mes achats à finaliser</h2>
+  <section class="spec-panel" data-subpanel="achats" id="mes-achats-finaliser">
     <div id="my-purchases-list"></div>
     <p class="empty-state" id="my-purchases-empty" style="display:none;">Aucun achat à finaliser pour l'instant.</p>
   </section>
@@ -286,8 +289,8 @@ async function init() {
   document.getElementById('account-content').style.display = 'block';
   loadMyProfile(session.user);
   initNotificationPrefs(session.user.id);
-  // Attend les 4 sections (pas seulement achats) avant de scroller — sinon une table encore en
-  // cours de chargement grandit après coup et le scroll atterrit trop court, avant la cible réelle.
+  // Attend les 4 sections (pas seulement achats) avant de basculer le sous-onglet — sinon une
+  // table encore en cours de chargement grandit après coup une fois le sous-onglet déjà affiché.
   await Promise.all([
     loadMyFavorites(session.user.id),
     loadMyBids(session.user.id),
@@ -295,7 +298,7 @@ async function init() {
     loadMyPurchases(session.user.id),
   ]);
   if (location.hash === '#achats') {
-    document.getElementById('mes-achats-finaliser')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    switchActiviteSubtab('achats');
   }
 }
 
@@ -807,9 +810,19 @@ document.querySelectorAll('#account-tabs .spec-tab').forEach(tab => {
   });
 });
 
+// Sous-onglets de "Mon activité" — même composant, scopé à #activite-subtabs et à l'attribut
+// data-subpanel (différent de data-panel) pour ne jamais interférer avec le switch d'onglets
+// principal ci-dessus, qui ne cible que les .spec-panel enfants directs de .account-wrap.
+function switchActiviteSubtab(name) {
+  document.querySelectorAll('#activite-subtabs .spec-tab').forEach(t => t.setAttribute('aria-selected', String(t.dataset.subtab === name)));
+  document.querySelectorAll('[data-panel="activite"] > .spec-panel').forEach(p => p.classList.toggle('active', p.dataset.subpanel === name));
+}
+document.querySelectorAll('#activite-subtabs .spec-tab').forEach(tab => {
+  tab.addEventListener('click', () => switchActiviteSubtab(tab.dataset.subtab));
+});
+
 // Ouvre l'onglet correspondant au #hash de l'URL (ex. compte.html#activite, ou compte.html#achats
-// qui ouvre le même onglet Activité — le scroll vers "Mes achats à finaliser" est géré séparément
-// dans init(), une fois le contenu réellement chargé, voir plus bas).
+// qui ouvre l'onglet Activité ET son sous-onglet "Mes achats" — voir switchActiviteSubtab ci-dessus).
 // Appelée au chargement ET à chaque changement de hash — car si on est déjà sur compte.html,
 // cliquer sur un lien du type "compte.html#activite" ne recharge pas la page : seul le hash change,
 // donc il faut écouter 'hashchange' pour que le clic sur "Mon activité" depuis le menu ait un effet.
@@ -822,9 +835,9 @@ applyTabFromHash();
 window.addEventListener('hashchange', () => {
   applyTabFromHash();
   // Contrairement au premier chargement (géré dans init(), une fois le contenu prêt), ici on est déjà
-  // sur la page et le contenu est déjà chargé — le scroll peut se faire immédiatement.
+  // sur la page et le contenu est déjà chargé — le changement de sous-onglet peut se faire immédiatement.
   if (location.hash === '#achats') {
-    document.getElementById('mes-achats-finaliser')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    switchActiviteSubtab('achats');
   }
 });
 
