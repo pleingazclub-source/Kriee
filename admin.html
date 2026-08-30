@@ -115,95 +115,108 @@
 
 <main class="admin-wrap" id="admin-content" style="display:none;">
 
-  <div class="revenue-dash">
-    <p class="revenue-dash__title">Revenu plateforme (frais de vente 18% HT, hors TVA)</p>
-    <div class="revenue-grid">
-      <div class="revenue-grid__item">
-        <span class="revenue-grid__num" id="rev-today">0 €</span>
-        <span class="revenue-grid__label">Aujourd'hui</span>
+  <div class="spec-tabs" role="tablist" id="admin-tabs">
+    <button class="spec-tab" data-tab="overview" aria-selected="true">Vue d'ensemble</button>
+    <button class="spec-tab" data-tab="lots" aria-selected="false">Lots</button>
+    <button class="spec-tab" data-tab="expertises" aria-selected="false">Expertises</button>
+    <button class="spec-tab" data-tab="users" aria-selected="false">Utilisateurs</button>
+    <button class="spec-tab" data-tab="flagged" aria-selected="false">Signalés</button>
+  </div>
+
+  <div class="spec-panel active" data-panel="overview">
+    <div class="revenue-dash">
+      <p class="revenue-dash__title">Revenu plateforme (frais de vente 18% HT, hors TVA)</p>
+      <div class="revenue-grid">
+        <div class="revenue-grid__item">
+          <span class="revenue-grid__num" id="rev-today">0 €</span>
+          <span class="revenue-grid__label">Aujourd'hui</span>
+        </div>
+        <div class="revenue-grid__item">
+          <span class="revenue-grid__num" id="rev-month">0 €</span>
+          <span class="revenue-grid__label">Ce mois</span>
+        </div>
+        <div class="revenue-grid__item">
+          <span class="revenue-grid__num" id="rev-year">0 €</span>
+          <span class="revenue-grid__label">Cette année</span>
+        </div>
+        <div class="revenue-grid__item">
+          <span class="revenue-grid__num" id="rev-total">0 €</span>
+          <span class="revenue-grid__label">Total réalisé (lots vendus)</span>
+        </div>
       </div>
-      <div class="revenue-grid__item">
-        <span class="revenue-grid__num" id="rev-month">0 €</span>
-        <span class="revenue-grid__label">Ce mois</span>
-      </div>
-      <div class="revenue-grid__item">
-        <span class="revenue-grid__num" id="rev-year">0 €</span>
-        <span class="revenue-grid__label">Cette année</span>
-      </div>
-      <div class="revenue-grid__item">
-        <span class="revenue-grid__num" id="rev-total">0 €</span>
-        <span class="revenue-grid__label">Total réalisé (lots vendus)</span>
+      <div class="revenue-potential">
+        <span class="revenue-potential__num" id="rev-potential">0 €</span>
+        <span class="revenue-potential__label"> de revenu potentiel sur les enchères en cours dont la réserve est déjà atteinte — encore susceptible d'augmenter avant clôture</span>
       </div>
     </div>
-    <div class="revenue-potential">
-      <span class="revenue-potential__num" id="rev-potential">0 €</span>
-      <span class="revenue-potential__label"> de revenu potentiel sur les enchères en cours dont la réserve est déjà atteinte — encore susceptible d'augmenter avant clôture</span>
+  </div>
+
+  <div class="spec-panel" data-panel="lots">
+    <div class="admin-filters" role="group">
+      <button class="chip" data-filter="draft" aria-pressed="true">En attente</button>
+      <button class="chip" data-filter="live">En ligne</button>
+      <button class="chip" data-filter="sold">Vendus</button>
+      <button class="chip" data-filter="unsold">Invendus</button>
+      <button class="chip" data-filter="cancelled">Refusés</button>
+      <button class="chip" data-filter="deleted">Supprimés</button>
+      <button class="chip" data-filter="all">Tous</button>
     </div>
+    <div class="admin-filters" role="group" aria-label="Filtrer par statut de réserve">
+      <button class="chip" data-reserve-filter="all" aria-pressed="true">Toutes réserves</button>
+      <button class="chip" data-reserve-filter="met">Réserve atteinte</button>
+      <button class="chip" data-reserve-filter="not">Réserve non atteinte</button>
+    </div>
+
+    <table class="admin-table">
+      <thead>
+        <tr>
+          <th></th>
+          <th>Lot</th>
+          <th>Vendeur</th>
+          <th>Enchère / Réserve</th>
+          <th>Statut</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="admin-rows"></tbody>
+    </table>
+    <p id="admin-empty" style="color:#5A6772; padding:1.5rem 0; display:none;">Aucun lot dans cette catégorie.</p>
   </div>
 
-  <div class="admin-filters" role="group">
-    <button class="chip" data-filter="draft" aria-pressed="true">En attente</button>
-    <button class="chip" data-filter="live">En ligne</button>
-    <button class="chip" data-filter="sold">Vendus</button>
-    <button class="chip" data-filter="unsold">Invendus</button>
-    <button class="chip" data-filter="cancelled">Refusés</button>
-    <button class="chip" data-filter="deleted">Supprimés</button>
-    <button class="chip" data-filter="all">Tous</button>
-  </div>
-  <div class="admin-filters" role="group" aria-label="Filtrer par statut de réserve">
-    <button class="chip" data-reserve-filter="all" aria-pressed="true">Toutes réserves</button>
-    <button class="chip" data-reserve-filter="met">Réserve atteinte</button>
-    <button class="chip" data-reserve-filter="not">Réserve non atteinte</button>
+  <div class="spec-panel" data-panel="expertises">
+    <p class="revenue-dash__title" style="color:var(--ink); margin-bottom:1rem;">Rapports d'expertise à valider</p>
+    <table class="admin-table">
+      <thead>
+        <tr><th>Lot</th><th>Vendeur</th><th>Rapport</th><th>Actions</th></tr>
+      </thead>
+      <tbody id="expertise-rows"></tbody>
+    </table>
+    <p id="expertise-empty" style="color:#5A6772; padding:1rem 0; display:none;">Aucun rapport en attente de validation.</p>
   </div>
 
-  <table class="admin-table">
-    <thead>
-      <tr>
-        <th></th>
-        <th>Lot</th>
-        <th>Vendeur</th>
-        <th>Enchère / Réserve</th>
-        <th>Statut</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-    <tbody id="admin-rows"></tbody>
-  </table>
-  <p id="admin-empty" style="color:#5A6772; padding:1.5rem 0; display:none;">Aucun lot dans cette catégorie.</p>
+  <div class="spec-panel" data-panel="users">
+    <p class="revenue-dash__title" style="color:var(--ink); margin-bottom:1rem;">Utilisateurs</p>
+    <input type="search" id="users-search" placeholder="Rechercher par nom ou pseudo..." style="width:100%; max-width:360px; padding:0.6rem 0.8rem; border:1px solid #C9C2B2; border-radius:3px; margin-bottom:1rem; font-family:var(--font-body); font-size:0.9rem;">
+    <table class="admin-table">
+      <thead>
+        <tr><th>Pseudo (public)</th><th>Nom complet</th><th>Ville</th><th>Inscrit le</th><th>Actions</th></tr>
+      </thead>
+      <tbody id="users-rows"></tbody>
+    </table>
+    <p id="users-empty" style="color:#5A6772; padding:1rem 0; display:none;">Aucun utilisateur ne correspond à cette recherche.</p>
+  </div>
 
-  <div class="divider" aria-hidden="true" style="margin: 2.5rem auto;"><span class="divider__mark"></span></div>
+  <div class="spec-panel" data-panel="flagged">
+    <p class="revenue-dash__title" style="color:var(--ink); margin-bottom:1rem;">Acheteurs signalés (désistements après vente acceptée)</p>
+    <table class="admin-table">
+      <thead>
+        <tr><th>Acheteur</th><th>Incidents</th><th>Statut</th><th>Actions</th></tr>
+      </thead>
+      <tbody id="flagged-buyers-rows"></tbody>
+    </table>
 
-  <p class="revenue-dash__title" style="color:var(--ink); margin-bottom:1rem;">Rapports d'expertise à valider</p>
-  <table class="admin-table">
-    <thead>
-      <tr><th>Lot</th><th>Vendeur</th><th>Rapport</th><th>Actions</th></tr>
-    </thead>
-    <tbody id="expertise-rows"></tbody>
-  </table>
-  <p id="expertise-empty" style="color:#5A6772; padding:1rem 0; display:none;">Aucun rapport en attente de validation.</p>
-
-  <div class="divider" aria-hidden="true" style="margin: 2.5rem auto;"><span class="divider__mark"></span></div>
-
-  <p class="revenue-dash__title" style="color:var(--ink); margin-bottom:1rem;">Utilisateurs</p>
-  <input type="search" id="users-search" placeholder="Rechercher par nom ou pseudo..." style="width:100%; max-width:360px; padding:0.6rem 0.8rem; border:1px solid #C9C2B2; border-radius:3px; margin-bottom:1rem; font-family:var(--font-body); font-size:0.9rem;">
-  <table class="admin-table">
-    <thead>
-      <tr><th>Pseudo (public)</th><th>Nom complet</th><th>Ville</th><th>Inscrit le</th><th>Actions</th></tr>
-    </thead>
-    <tbody id="users-rows"></tbody>
-  </table>
-  <p id="users-empty" style="color:#5A6772; padding:1rem 0; display:none;">Aucun utilisateur ne correspond à cette recherche.</p>
-
-  <div class="divider" aria-hidden="true" style="margin: 2.5rem auto;"><span class="divider__mark"></span></div>
-
-  <p class="revenue-dash__title" style="color:var(--ink); margin-bottom:1rem;">Acheteurs signalés (désistements après vente acceptée)</p>
-  <table class="admin-table">
-    <thead>
-      <tr><th>Acheteur</th><th>Incidents</th><th>Statut</th><th>Actions</th></tr>
-    </thead>
-    <tbody id="flagged-buyers-rows"></tbody>
-  </table>
-  <p id="flagged-buyers-empty" style="color:#5A6772; padding:1rem 0; display:none;">Aucun acheteur signalé pour l'instant.</p>
+    <p id="flagged-buyers-empty" style="color:#5A6772; padding:1rem 0; display:none;">Aucun acheteur signalé pour l'instant.</p>
+  </div>
 </main>
 
 <div class="modal-overlay" id="reject-modal">
@@ -559,6 +572,15 @@ function renderUsers() {
 }
 
 document.getElementById('users-search').addEventListener('input', renderUsers);
+
+document.querySelectorAll('#admin-tabs .spec-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('#admin-tabs .spec-tab').forEach(t => t.setAttribute('aria-selected', 'false'));
+    tab.setAttribute('aria-selected', 'true');
+    document.querySelectorAll('.admin-wrap > .spec-panel').forEach(p => p.classList.remove('active'));
+    document.querySelector(`.spec-panel[data-panel="${tab.dataset.tab}"]`).classList.add('active');
+  });
+});
 
 init();
 </script>
