@@ -67,6 +67,9 @@
       <h3 style="font-family:var(--font-display); font-weight:500;">Description</h3>
       <p id="lot-description"></p>
     </div>
+    <p style="font-size:0.82rem; color:#5A6772; margin-top:1.2rem; padding-top:1rem; border-top:1px solid #E4DFD3;">Vendu en l'état — Kriee n'organise pas de visite avant achat. Base ton enchère sur les photos, vidéos et documents fournis ci-dessus.</p>
+    <div id="lot-checklist"></div>
+    <p id="lot-expertise-link" style="font-size:0.85rem; display:none;"></p>
   </section>
 
   <aside class="bid-panel">
@@ -110,18 +113,6 @@
       <span class="adjuge-banner__text">Adjugé !</span>
       <span class="adjuge-banner__sub">Sous réserve de l'approbation du vendeur</span>
     </div>
-
-    <section class="visit-request" id="visit-request-section" style="display:none; margin-top:1.5rem; padding-top:1.5rem; border-top:1px solid #E4DFD3;">
-      <h3 style="font-family:var(--font-display); font-weight:500; font-size:1.05rem; margin-bottom:0.5rem;">Visiter ce bateau avant d'enchérir</h3>
-      <p style="font-size:0.85rem; color:#5A6772; margin-bottom:0.8rem;">Propose 1 à 3 créneaux — le vendeur en confirmera un. Ses coordonnées et l'adresse précise ne te sont communiquées qu'une fois le créneau confirmé.</p>
-      <div id="visit-slot-inputs" style="display:flex; flex-direction:column; gap:0.5rem; margin-bottom:0.8rem;">
-        <input type="datetime-local" class="visit-slot-input">
-        <input type="datetime-local" class="visit-slot-input">
-        <input type="datetime-local" class="visit-slot-input">
-      </div>
-      <button type="button" id="visit-request-btn" class="btn btn--ghost" style="width:100%;">Demander une visite</button>
-      <p id="visit-request-feedback" style="font-size:0.85rem; margin-top:0.6rem;" role="status"></p>
-    </section>
   </aside>
 
   <div class="flash-overlay" id="flash-overlay"></div>
