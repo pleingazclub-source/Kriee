@@ -285,6 +285,25 @@
         <label for="description">Description</label>
         <textarea id="description" required placeholder="État général, historique, ce qui est inclus dans la vente..."></textarea>
       </div>
+
+      <div class="field" id="checklist-boat-only">
+        <label>Checklist de transparence</label>
+        <p class="hint" style="margin:0 0 0.6rem;">Déclaration du vendeur — pas une vérification indépendante. Coche ce qui est vérifié et en bon état ; laisse décoché sinon (précise dans la description si besoin).</p>
+        <div style="display:flex; flex-direction:column; gap:0.5rem;">
+          <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400;"><input type="checkbox" class="checklist-item" data-key="coque"> Coque inspectée, pas de voie d'eau connue</label>
+          <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400;"><input type="checkbox" class="checklist-item" data-key="moteur"> Moteur démarre et fonctionne normalement</label>
+          <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400;"><input type="checkbox" class="checklist-item" data-key="electricite"> Circuit électrique fonctionnel, pas de court-circuit connu</label>
+          <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400;"><input type="checkbox" class="checklist-item" data-key="securite"> Équipements de sécurité obligatoires à bord et à jour</label>
+          <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400;"><input type="checkbox" class="checklist-item" data-key="papiers"> Papiers administratifs (francisation/immatriculation) à jour</label>
+        </div>
+      </div>
+
+      <div class="field" id="expertise-field" style="display:none;">
+        <label for="expertise">Rapport d'expertise (obligatoire au-delà de 5000€ de prix de départ)</label>
+        <p class="hint" style="margin:0 0 0.6rem;">Tu peux le fournir maintenant, ou après l'enchère — mais tant qu'il n'est pas fourni, tu ne pourras pas accéder aux coordonnées de l'acheteur ni finaliser la vente. Coût indicatif : 300 à 1500€ selon la taille du bateau.</p>
+        <input type="file" id="expertise" accept="application/pdf">
+      </div>
+
       <div class="field">
         <label for="documents">Documents disponibles (un par ligne, facultatif)</label>
         <textarea id="documents" placeholder="Acte de francisation&#10;Dernier rapport de visite technique"></textarea>
@@ -407,7 +426,19 @@ document.getElementById('category').addEventListener('change', () => { stepIndex
 function syncRequiredFields() {
   const isEquip = document.getElementById('category').value === 'equipement';
   document.getElementById('e-type').required = isEquip;
+  document.getElementById('checklist-boat-only').style.display = isEquip ? 'none' : 'block';
+  syncExpertiseVisibility();
 }
+
+// L'expertise devient obligatoire (avant ou après l'enchère) au-delà de 5000€ de prix de départ,
+// et seulement pour les bateaux — l'accastillage n'est jamais concerné.
+const EXPERTISE_THRESHOLD = 5000;
+function syncExpertiseVisibility() {
+  const isEquip = document.getElementById('category').value === 'equipement';
+  const startingPrice = Number(document.getElementById('starting').value || 0);
+  document.getElementById('expertise-field').style.display = (!isEquip && startingPrice >= EXPERTISE_THRESHOLD) ? 'block' : 'none';
+}
+document.getElementById('starting').addEventListener('input', syncExpertiseVisibility);
 syncRequiredFields();
 
 // La durée par défaut diffère selon le type de bien : un bateau demande une visite,
@@ -627,7 +658,11 @@ async function initEditMode() {
     return;
   }
 
-  existingLotData = { images: lot.images || [], video_url: lot.video_url };
+  existingLotData = { images: lot.images || [], video_url: lot.video_url, expertise_report_url: lot.expertise_report_url };
+  Object.entries(lot.checklist || {}).forEach(([key, checked]) => {
+    const cb = document.querySelector(`.checklist-item[data-key="${key}"]`);
+    if (cb) cb.checked = checked;
+  });
 
   document.getElementById('page-title').textContent = 'Corriger et resoumettre ton lot';
   document.getElementById('submit-btn').textContent = 'Resoumettre le lot pour modération';
@@ -839,6 +874,16 @@ document.getElementById('sell-form').addEventListener('submit', async (e) => {
     feedback.textContent = `Envoi des fichiers (${uploaded}/${totalFiles})...`;
   }
 
+  const expertiseFile = document.getElementById('expertise')?.files[0];
+  let expertiseUrl = existingLotData?.expertise_report_url || null;
+  if (expertiseFile) {
+    feedback.textContent = 'Envoi du rapport d\'expertise...';
+    expertiseUrl = await uploadLotMedia(expertiseFile, session.user.id);
+  }
+
+  const checklist = {};
+  document.querySelectorAll('.checklist-item').forEach(cb => { checklist[cb.dataset.key] = cb.checked; });
+
   const payload = {
     category_id: cat.id,
     title: document.getElementById('title').value,
@@ -854,6 +899,8 @@ document.getElementById('sell-form').addEventListener('submit', async (e) => {
     lng: coords?.lng ?? null,
     images: imageUrls,
     video_url: videoUrl,
+    expertise_report_url: expertiseUrl,
+    checklist,
     specs,
     status: 'draft',
     starts_at: new Date().toISOString(),
