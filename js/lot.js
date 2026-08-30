@@ -87,6 +87,20 @@ function renderLot() {
   document.getElementById('lot-region').textContent = l.region;
   document.getElementById('lot-description').textContent = l.description || '';
 
+  const checklistLabels = { coque: 'Coque inspectée', moteur: 'Moteur fonctionnel', electricite: 'Circuit électrique OK', securite: 'Sécurité à jour', papiers: 'Papiers à jour' };
+  const checklistEntries = Object.entries(l.checklist || {}).filter(([, checked]) => checked);
+  document.getElementById('lot-checklist').innerHTML = checklistEntries.length
+    ? `<p style="font-size:0.82rem; color:#5A6772; margin-top:0.6rem;">Déclaré par le vendeur : ${checklistEntries.map(([key]) => `✓ ${checklistLabels[key] || key}`).join(' · ')}</p>`
+    : '';
+
+  const expertiseLink = document.getElementById('lot-expertise-link');
+  if (l.expertise_report_url && l.expertise_status === 'approved') {
+    expertiseLink.style.display = 'block';
+    expertiseLink.innerHTML = `<a href="${l.expertise_report_url}" target="_blank" rel="noopener">📄 Voir le rapport d'expertise (validé par Kriee)</a>`;
+  } else {
+    expertiseLink.style.display = 'none';
+  }
+
   document.getElementById('lot-specs').innerHTML = `
     ${l.year_built ? `<tr><td>Année</td><td>${l.year_built}</td></tr>` : ''}
     ${l.length_m ? `<tr><td>Longueur</td><td>${l.length_m} m</td></tr>` : ''}
@@ -110,50 +124,12 @@ function renderLot() {
 
   supabaseClient.auth.getSession().then(({ data: { session } }) => {
     if (!session) return;
-    const isOwnLot = checkOwnLot(session.user.id);
-    if (!isOwnLot) {
+    if (!checkOwnLot(session.user.id)) {
       const leading = checkLeadingStatus(session.user.id);
       if (!leading) checkProfileComplete(session.user.id);
     }
-    // Visite réservée aux bateaux (pas l'accastillage), pas sur son propre lot, lot toujours en cours.
-    const visitSection = document.getElementById('visit-request-section');
-    if (!isOwnLot && l.category_slug !== 'equipement' && l.status === 'live') {
-      visitSection.style.display = 'block';
-    }
   });
 }
-
-// Le "?." évite qu'un déploiement partiel (lot.js à jour mais ancien lot.html sans cette section,
-// ou l'inverse) ne plante tout le script — sans ce garde-fou, une erreur ici bloque même le
-// chargement du lot plus bas, qui n'a pourtant rien à voir.
-document.getElementById('visit-request-btn')?.addEventListener('click', async () => {
-  const feedback = document.getElementById('visit-request-feedback');
-  const slots = [...document.querySelectorAll('.visit-slot-input')]
-    .map(i => i.value)
-    .filter(Boolean)
-    .map(v => new Date(v).toISOString());
-
-  if (!slots.length) {
-    feedback.textContent = 'Propose au moins un créneau.';
-    feedback.style.color = 'var(--buoy)';
-    return;
-  }
-
-  const params = new URLSearchParams(location.search);
-  const lotId = params.get('id');
-  feedback.textContent = 'Envoi de la demande...';
-  feedback.style.color = 'var(--mistral)';
-
-  const { error } = await supabaseClient.rpc('request_visit', { p_lot_id: lotId, p_proposed_slots: slots });
-  if (error) {
-    feedback.textContent = 'Erreur : ' + error.message;
-    feedback.style.color = 'var(--buoy)';
-  } else {
-    feedback.textContent = 'Demande envoyée — tu seras notifié dès que le vendeur confirme un créneau.';
-    feedback.style.color = 'var(--mistral)';
-    document.getElementById('visit-request-btn').disabled = true;
-  }
-});
 
 let galleryKeydownHandler = null;
 
