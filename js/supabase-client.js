@@ -64,3 +64,25 @@ async function geocodeAddress(query) {
     return null; // timeout, réseau indisponible, réponse invalide... jamais bloquant pour l'appelant
   }
 }
+
+// Associe chaque type de notification au sous-onglet de "Mon activité" concerné. Centralisé ici
+// (plutôt que dupliqué dans compte.html et auth.js) pour que le badge du menu déroulant (toutes
+// pages) et les badges par sous-onglet (compte.html) comptent toujours exactement la même chose —
+// sans ça, une notification d'un type non reconnu (ex. un test manuel) gonfle l'un sans jamais
+// apparaître dans l'autre. 'sale_confirmed' est envoyé aussi bien à l'acheteur qu'au vendeur avec
+// le même type — rattachée à "achats" par défaut : côté vendeur, l'info reste de toute façon
+// visible directement dans "Mes lots en vente".
+const NOTIF_TYPE_TO_SUBTAB = {
+  outbid: 'encheres',
+  auction_won: 'achats',
+  sale_accepted: 'achats',
+  sale_confirmed: 'achats',
+  lot_sold: 'lots',
+  lot_unsold: 'lots',
+  lot_approved: 'lots',
+  lot_rejected: 'lots',
+  new_bid: 'lots',
+  expertise_needed: 'lots',
+  expertise_approved: 'lots',
+  expertise_rejected: 'lots',
+};

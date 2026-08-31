@@ -35,7 +35,8 @@ async function initAuthNav() {
       .from('notifications')
       .select('id', { count: 'exact', head: true })
       .eq('user_id', userId)
-      .is('read_at', null);
+      .is('read_at', null)
+      .in('type', Object.keys(NOTIF_TYPE_TO_SUBTAB));
     activiteBadge.textContent = count > 9 ? '9+' : String(count || 0);
     activiteBadge.style.display = count > 0 ? 'inline-flex' : 'none';
   }

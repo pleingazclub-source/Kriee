@@ -308,23 +308,7 @@ async function init() {
 }
 
 // ---------- Badges de notification (façon leboncoin) sur les sous-onglets de "Mon activité" ----------
-// Associe chaque type de notification au sous-onglet concerné. 'sale_confirmed' est envoyé aussi
-// bien à l'acheteur qu'au vendeur avec le même type — on la rattache à "achats" par défaut : côté
-// vendeur, l'info reste de toute façon visible directement dans "Mes lots en vente".
-const NOTIF_TYPE_TO_SUBTAB = {
-  outbid: 'encheres',
-  auction_won: 'achats',
-  sale_accepted: 'achats',
-  sale_confirmed: 'achats',
-  lot_sold: 'lots',
-  lot_unsold: 'lots',
-  lot_approved: 'lots',
-  lot_rejected: 'lots',
-  new_bid: 'lots',
-  expertise_needed: 'lots',
-  expertise_approved: 'lots',
-  expertise_rejected: 'lots',
-};
+// NOTIF_TYPE_TO_SUBTAB est défini dans supabase-client.js (partagé avec auth.js).
 
 let currentUserId = null;
 
