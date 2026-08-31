@@ -35,34 +35,16 @@
 </head>
 <body>
 
-<header class="site-header">
-  <a href="index.html" class="brand">
-    <svg class="brand__mark" width="24" height="26" viewBox="0 0 24 26" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+<header class="site-header" style="justify-content:space-between;">
+  <a href="index.html" class="brand" style="font-size:1.1rem;">
+    <svg class="brand__mark" width="20" height="22" viewBox="0 0 24 26" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
       <line x1="5" y1="1" x2="5" y2="25" stroke="#0E2233" stroke-width="2"/>
       <path d="M5 3 L21 8.5 L5 14 Z" fill="#C7401F"/>
     </svg>
     <span class="brand__word">Kri<span style="color:var(--buoy)">ee</span></span>
-    <span class="brand__sub">SUD DE LA FRANCE</span>
+    <span style="font-family:var(--font-body); font-weight:400; color:#5A6772; margin-left:0.6rem; font-size:0.95rem;">Déposer un lot</span>
   </a>
-  <nav class="site-nav">
-    <a href="encheres.html">Enchères en cours</a>
-    <a href="vendre.html" class="btn btn--primary">Déposer un lot</a>
-    <a href="#" class="btn btn--ghost" id="nav-login">Se connecter</a>
-
-    <div class="user-menu" id="user-menu" style="display:none;">
-      <button type="button" class="btn btn--ghost" id="user-menu-toggle">👤 <span id="user-menu-label"></span></button>
-      <div class="user-menu__dropdown" id="user-menu-dropdown">
-        <div class="user-menu__header">
-          <strong id="user-menu-name"></strong>
-          <span id="user-menu-email"></span>
-        </div>
-        <a href="compte.html">Mon profil</a>
-        <a href="compte.html#activite">Mon activité</a>
-        <a href="admin.html" id="user-menu-admin-link" style="display:none;">Modération</a>
-        <button type="button" id="user-menu-logout">Se déconnecter</button>
-      </div>
-    </div>
-  </nav>
+  <a href="index.html" class="btn btn--ghost">Quitter</a>
 </header>
 
 <div class="page-band">
@@ -90,7 +72,8 @@
   <form id="sell-form">
 
     <!-- ÉTAPE 1 : type de lot + infos de base -->
-    <section class="spec-panel active" data-step="1">
+    <!-- ÉTAPE 1a : titre & catégorie -->
+    <section class="spec-panel active" data-step="1a">
       <div class="field">
         <label for="category">Que voulez-vous vendre ?</label>
         <select id="category" required>
@@ -105,7 +88,10 @@
         <label for="title">Titre du lot</label>
         <input type="text" id="title" required placeholder="Ex. Voilier Bénéteau First 30 — 1998">
       </div>
+    </section>
 
+    <!-- ÉTAPE 1b : localisation -->
+    <section class="spec-panel" data-step="1b">
       <div class="field-row">
         <div class="field">
           <label for="region">Région</label>
@@ -126,7 +112,10 @@
         <input type="text" id="address" required placeholder="Au minimum une ville — ex. Toulon, ou une adresse complète pour plus de précision">
         <p class="hint" id="geocode-status" style="margin:0.4rem 0 0;">Une ville suffit déjà à situer le lot correctement pour le tri par proximité. Une adresse complète (rue, code postal) affine encore la précision.</p>
       </div>
+    </section>
 
+    <!-- ÉTAPE 1c : prix & durée -->
+    <section class="spec-panel" data-step="1c">
       <div class="field-row">
         <div class="field">
           <label for="starting">Prix de départ (€)</label>
@@ -352,15 +341,16 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/supabase-client.js"></script>
-<script src="js/auth.js"></script>
 <script>
 // ---------- Assistant multi-étapes, avec branche bateau / équipement ----------
 function currentSteps() {
   const isEquip = document.getElementById('category').value === 'equipement';
-  return isEquip ? ['1', '2-equip', '4', '5'] : ['1', '2-boat', '3-boat', '4', '5'];
+  return isEquip ? ['1a', '1b', '1c', '2-equip', '4', '5'] : ['1a', '1b', '1c', '2-boat', '3-boat', '4', '5'];
 }
 const STEP_LABELS = {
-  '1': 'Infos de base',
+  '1a': 'Titre & catégorie',
+  '1b': 'Localisation',
+  '1c': 'Prix & durée',
   '2-boat': 'Caractéristiques',
   '2-equip': 'Caractéristiques',
   '3-boat': 'Équipements à bord',
