@@ -5,28 +5,36 @@ const SUPABASE_ANON_KEY = 'sb_publishable_YIE6KLjDJZucMEBg5kBINw_QEisVdBz';
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // Modèle économique : frais acheteur uniquement (le vendeur touche le prix marteau intégral).
-// Taux dégressif selon le prix marteau final (palier simple, pas de calcul marginal par tranche —
-// tout le montant est facturé au taux du palier atteint, comme chez les grandes maisons d'enchères
-// nautiques) : plus l'enchère finale est élevée, plus le taux de frais baisse.
-const BUYER_FEE_TIERS = [
-  { max: 25000, rate: 0.18 },
-  { max: 100000, rate: 0.12 },
-  { max: Infinity, rate: 0.08 },
+// Frais dégressifs calculés PAR TRANCHE sur le prix marteau final, comme l'impôt sur le revenu —
+// chaque tranche du montant est facturée à son propre taux, pas un taux unique appliqué à tout
+// le montant dès qu'un palier est atteint. Ex. un lot adjugé à 150 000€ paie 18% sur les premiers
+// 25 000€, 12% sur la tranche 25 000-100 000€, et 8% sur le reste au-delà de 100 000€.
+const BUYER_FEE_BRACKETS = [
+  { upTo: 25000, rate: 0.18 },
+  { upTo: 100000, rate: 0.12 },
+  { upTo: Infinity, rate: 0.08 },
 ];
 const VAT_RATE = 0.21; // TVA sur les frais de vente uniquement
 
-function buyerFeeRate(hammerPrice) {
-  return BUYER_FEE_TIERS.find(tier => hammerPrice <= tier.max).rate;
+function buyerFeeHTFromPrice(hammerPrice) {
+  let fee = 0;
+  let lower = 0;
+  for (const bracket of BUYER_FEE_BRACKETS) {
+    const upper = Math.min(hammerPrice, bracket.upTo);
+    if (upper > lower) fee += (upper - lower) * bracket.rate;
+    lower = bracket.upTo;
+    if (hammerPrice <= bracket.upTo) break;
+  }
+  return fee;
 }
 
 function computeBuyerPrice(hammerPrice) {
-  const feeRate = buyerFeeRate(hammerPrice);
-  const feeHT = hammerPrice * feeRate;
+  const feeHT = buyerFeeHTFromPrice(hammerPrice);
   const feeVAT = feeHT * VAT_RATE;
   const total = hammerPrice + feeHT + feeVAT;
   return {
     hammerPrice,
-    feeRate,
+    effectiveRate: hammerPrice > 0 ? feeHT / hammerPrice : 0,
     feeHT: Math.round(feeHT * 100) / 100,
     feeVAT: Math.round(feeVAT * 100) / 100,
     total: Math.round(total * 100) / 100,

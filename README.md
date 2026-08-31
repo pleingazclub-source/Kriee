@@ -35,7 +35,7 @@ Un simple `create or replace view` ne suffit PAS. C'est déjà arrivé plusieurs
 - Anti-sniping : +3 min si enchère dans les 3 dernières minutes
 - Un acheteur ne peut être en tête que sur un seul bateau à la fois (accastillage libre)
 - Confirmation avant validation d'une enchère (évite les erreurs de saisie)
-- Calcul du prix acheteur : prix marteau + frais de vente dégressifs (18% jusqu'à 25k€, 12% de 25k à 100k€, 8% au-delà) + TVA 21% sur les frais (vendeur payé au marteau, 0 frais)
+- Calcul du prix acheteur : prix marteau + frais de vente calculés par tranche sur le prix marteau final, comme l'impôt (18% jusqu'à 25k€, 12% de 25k à 100k€, 8% au-delà) + TVA 21% sur les frais (vendeur payé au marteau, 0 frais)
 - Navigation photo gauche/droite sur la fiche lot
 
 **Dépôt et modération**
