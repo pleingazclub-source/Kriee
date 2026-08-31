@@ -15,6 +15,12 @@
   .field input, .field select, .field textarea {
     width: 100%; padding: 0.65rem; border: 1px solid #C9C2B2; border-radius: 3px; font-family: var(--font-body); font-size: 0.95rem;
   }
+  /* Exclut les cases à cocher/radio de la règle ci-dessus (pensée pour les champs texte) —
+     sans ça, width:100%/padding/border déforment la case et cassent son alignement avec le
+     texte du label (checklist de transparence). */
+  .field input[type="checkbox"], .field input[type="radio"] {
+    width: auto; padding: 0; border: none; flex-shrink: 0;
+  }
   .field textarea { min-height: 90px; }
   .field-row { display: flex; gap: 1rem; flex-wrap: wrap; }
   .field-row .field { flex: 1; min-width: 160px; }
