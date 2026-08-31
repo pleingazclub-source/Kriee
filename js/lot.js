@@ -238,7 +238,7 @@ function renderBreakdown(amount) {
   const isAuto = document.getElementById('bid-mode-auto')?.checked;
   document.getElementById('price-breakdown').innerHTML = `
     <div class="price-breakdown__row"><span>${isAuto ? 'Ton plafond' : 'Ta mise'}</span><span>${formatEUR(b.hammerPrice)}</span></div>
-    <div class="price-breakdown__row"><span>Frais de vente (18%)</span><span>${formatEUR(b.feeHT)}</span></div>
+    <div class="price-breakdown__row"><span>Frais de vente (${Math.round(b.feeRate * 100)}%)</span><span>${formatEUR(b.feeHT)}</span></div>
     <div class="price-breakdown__row"><span>TVA sur les frais (21%)</span><span>${formatEUR(b.feeVAT)}</span></div>
     <div class="price-breakdown__row price-breakdown__row--total"><span>Total maximum si tu gagnes</span><span>${formatEUR(b.total)}</span></div>
   `;

@@ -4,16 +4,29 @@ const SUPABASE_ANON_KEY = 'sb_publishable_YIE6KLjDJZucMEBg5kBINw_QEisVdBz';
 
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// Modèle économique : frais acheteur uniquement (le vendeur touche le prix marteau intégral)
-const BUYER_PREMIUM_RATE = 0.18; // frais de vente
-const VAT_RATE = 0.21;           // TVA sur les frais de vente uniquement
+// Modèle économique : frais acheteur uniquement (le vendeur touche le prix marteau intégral).
+// Taux dégressif selon le prix marteau final (palier simple, pas de calcul marginal par tranche —
+// tout le montant est facturé au taux du palier atteint, comme chez les grandes maisons d'enchères
+// nautiques) : plus l'enchère finale est élevée, plus le taux de frais baisse.
+const BUYER_FEE_TIERS = [
+  { max: 25000, rate: 0.18 },
+  { max: 100000, rate: 0.12 },
+  { max: Infinity, rate: 0.08 },
+];
+const VAT_RATE = 0.21; // TVA sur les frais de vente uniquement
+
+function buyerFeeRate(hammerPrice) {
+  return BUYER_FEE_TIERS.find(tier => hammerPrice <= tier.max).rate;
+}
 
 function computeBuyerPrice(hammerPrice) {
-  const feeHT = hammerPrice * BUYER_PREMIUM_RATE;
+  const feeRate = buyerFeeRate(hammerPrice);
+  const feeHT = hammerPrice * feeRate;
   const feeVAT = feeHT * VAT_RATE;
   const total = hammerPrice + feeHT + feeVAT;
   return {
     hammerPrice,
+    feeRate,
     feeHT: Math.round(feeHT * 100) / 100,
     feeVAT: Math.round(feeVAT * 100) / 100,
     total: Math.round(total * 100) / 100,

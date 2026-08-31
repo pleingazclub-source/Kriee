@@ -123,7 +123,7 @@
 
   <div class="spec-panel active" data-panel="overview">
     <div class="revenue-dash">
-      <p class="revenue-dash__title">Revenu plateforme (frais de vente 18% HT, hors TVA)</p>
+      <p class="revenue-dash__title">Revenu plateforme (frais de vente 8-18% dégressifs selon le prix, HT, hors TVA)</p>
       <div class="revenue-grid">
         <div class="revenue-grid__item">
           <span class="revenue-grid__num" id="rev-today">0 €</span>
@@ -355,7 +355,7 @@ function renderExpertiseModeration() {
     };
   });
 }
-function buyerFeeHT(l) { return l.current_price * 0.18; }
+function buyerFeeHT(l) { return l.current_price * buyerFeeRate(l.current_price); }
 
 function renderRevenueDashboard() {
   const now = new Date();
