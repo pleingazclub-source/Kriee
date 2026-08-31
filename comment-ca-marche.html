@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Comment ça marche — Kriee</title>
+<meta name="description" content="Comment fonctionnent les enchères, les frais, la modération et la vérification des lots sur Kriee.">
+<link rel="stylesheet" href="css/fonts.css">
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .how-wrap { max-width: 780px; margin: 0 auto; padding: 2.5rem 2rem 4rem; }
+  .how-wrap h2 { font-family: var(--font-display); font-size: 1.35rem; margin: 2.4rem 0 0.9rem; }
+  .how-wrap h3 { font-family: var(--font-display); font-weight: 500; font-size: 1.05rem; margin: 1.3rem 0 0.5rem; }
+  .how-wrap p, .how-wrap li { color: #333; line-height: 1.65; font-size: 0.95rem; }
+  .how-wrap ul { padding-left: 1.3rem; }
+  .how-toc { background: var(--chalk); border-radius: var(--radius); padding: 1.2rem 1.5rem; margin: 1.5rem 0 2rem; }
+  .how-toc p { font-family: var(--font-data); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: #5A6772; margin: 0 0 0.6rem; }
+  .how-toc ol { margin: 0; padding-left: 1.2rem; }
+  .how-toc a { color: var(--ink); text-decoration: none; font-size: 0.9rem; }
+  .how-toc a:hover { text-decoration: underline; }
+  .how-callout { background: #DCEFE3; border-radius: 3px; padding: 0.9rem 1.1rem; font-size: 0.88rem; margin: 0.8rem 0; }
+  .how-callout--warn { background: #FCEFEA; }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <a href="index.html" class="brand">
+    <svg class="brand__mark" width="24" height="26" viewBox="0 0 24 26" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <line x1="5" y1="1" x2="5" y2="25" stroke="#0E2233" stroke-width="2"/>
+      <path d="M5 3 L21 8.5 L5 14 Z" fill="#C7401F"/>
+    </svg>
+    <span class="brand__word">Kri<span style="color:var(--buoy)">ee</span></span>
+    <span class="brand__sub">SUD DE LA FRANCE</span>
+  </a>
+  <nav class="site-nav">
+    <a href="encheres.html">Enchères en cours</a>
+    <a href="comment-ca-marche.html">Comment ça marche</a>
+    <a href="vendre.html" class="btn btn--primary">Vendre un bateau</a>
+    <a href="#" class="btn btn--ghost" id="nav-login">Se connecter</a>
+    <div class="user-menu" id="user-menu" style="display:none;">
+      <button type="button" class="btn btn--ghost" id="user-menu-toggle">👤 <span id="user-menu-label"></span></button>
+      <div class="user-menu__dropdown" id="user-menu-dropdown">
+        <div class="user-menu__header"><strong id="user-menu-name"></strong><span id="user-menu-email"></span></div>
+        <a href="compte.html">Mon profil</a>
+        <a href="compte.html#activite">Mon activité</a>
+        <a href="admin.html" id="user-menu-admin-link" style="display:none;">Modération</a>
+        <button type="button" id="user-menu-logout">Se déconnecter</button>
+      </div>
+    </div>
+  </nav>
+</header>
+
+<div class="page-band">
+  <div class="page-band__inner">
+    <p class="page-band__eyebrow">Le fonctionnement de Kriee</p>
+    <h1 class="page-band__title">Comment ça marche</h1>
+  </div>
+</div>
+
+<main class="how-wrap">
+
+  <div class="how-toc">
+    <p>Sur cette page</p>
+    <ol>
+      <li><a href="#frais">Les frais — 0% côté vendeur</a></li>
+      <li><a href="#encheres">Comment fonctionne une enchère</a></li>
+      <li><a href="#depot">Déposer un lot</a></li>
+      <li><a href="#verification">Checklist et expertise</a></li>
+      <li><a href="#cloture">La clôture et la suite</a></li>
+      <li><a href="#visite">Visite avant achat</a></li>
+      <li><a href="#modération">Modération</a></li>
+      <li><a href="#notifications">Notifications</a></li>
+    </ol>
+  </div>
+
+  <h2 id="frais">1. Les frais — 0% côté vendeur</h2>
+  <p>Le vendeur ne paie <strong>aucun frais</strong> : il touche l'intégralité du prix marteau (le montant de la dernière enchère validée). Tous les frais de la plateforme sont à la charge de l'acheteur :</p>
+  <ul>
+    <li><strong>18%</strong> de frais de vente sur le prix marteau</li>
+    <li><strong>+ TVA à 21%</strong> sur ces frais uniquement (jamais sur le prix marteau lui-même)</li>
+  </ul>
+  <p>Exemple : un bateau adjugé à 5 000 € coûte au vendeur 0 € de frais ; l'acheteur règle 5 000 € + 900 € (18%) + 189 € (TVA sur les frais) = <strong>6 089 €</strong> au total.</p>
+
+  <h2 id="encheres">2. Comment fonctionne une enchère</h2>
+  <h3>Deux modes d'enchère, au choix à chaque mise</h3>
+  <ul>
+    <li><strong>Normale</strong> — le montant que tu saisis devient immédiatement le prix affiché, visible de tous.</li>
+    <li><strong>Automatique</strong> — tu fixes un plafond privé (jamais révélé aux autres) ; le système enchérit pour toi, palier par palier, jusqu'à ce plafond si quelqu'un te dépasse.</li>
+  </ul>
+  <h3>Anti-sniping</h3>
+  <p>Toute enchère posée dans les 3 dernières minutes prolonge automatiquement la clôture de 3 minutes — impossible de remporter un lot par une enchère de dernière seconde sans laisser aux autres une chance de répondre.</p>
+  <h3>Une seule enchère "bateau" à la fois</h3>
+  <p>Tu ne peux être en tête que sur un seul bateau à la fois (voile, moteur ou semi-rigide) — il faut attendre d'être dépassé ou que l'enchère se termine avant d'en démarrer une autre. L'accastillage (équipement) reste libre, sans cette limite.</p>
+  <h3>Engagement</h3>
+  <p>Chaque enchère nécessite de cocher une case d'engagement à payer si tu remportes le lot. Ce n'est pas qu'une formalité : en droit français, l'accord sur la chose et le prix forme la vente — ta case cochée sert de preuve de ton consentement explicite en cas de litige.</p>
+
+  <h2 id="depot">3. Déposer un lot</h2>
+  <p>Le dépôt se fait en plusieurs étapes : informations générales, caractéristiques techniques, photos/vidéo, description et documents. Le lot passe d'abord en statut <em>brouillon</em>, puis doit être validé par la modération avant de passer en ligne (voir §7).</p>
+  <p>Durée de l'enchère au choix, de 3 à 60 jours.</p>
+
+  <h2 id="verification">4. Checklist et expertise</h2>
+  <p>Pour plus de transparence, chaque dépôt de bateau inclut une <strong>checklist déclarative</strong> (coque, moteur, électricité, sécurité, papiers) — une déclaration du vendeur, pas une vérification indépendante.</p>
+  <div class="how-callout how-callout--warn">
+    <strong>Au-delà de 5 000 € de prix de départ</strong>, un rapport d'expertise devient obligatoire — fournissable avant ou après l'enchère. S'il est fourni après, la vente reste bloquée (coordonnées non communiquées) tant que le rapport n'est pas validé par la modération.
+  </div>
+
+  <h2 id="cloture">5. La clôture et la suite</h2>
+  <p>À la clôture, si le prix de réserve (fixé par le vendeur, jamais révélé) est atteint, le lot passe en <em>vendu</em> ; sinon en <em>invendu</em> — le vendeur peut alors le remettre en vente directement.</p>
+  <p>Le vendeur accepte ou refuse la vente ; l'acheteur confirme son engagement à payer. Une fois les deux d'accord (et le rapport d'expertise validé si applicable), les coordonnées se révèlent aux deux parties — jamais avant.</p>
+
+  <h2 id="visite">6. Visite avant achat</h2>
+  <p>Kriee n'organise pas de visite avant achat. Chaque lot est <strong>vendu en l'état</strong> : base ton enchère sur les photos, vidéos, la description, la checklist et le rapport d'expertise (si présent) fournis sur la fiche du lot.</p>
+
+  <h2 id="modération">7. Modération</h2>
+  <p>Chaque lot déposé est examiné avant sa mise en ligne — un lot peut être approuvé, refusé (avec motif, corrigible) ou supprimé définitivement (motif non corrigible, en cas d'annonce clairement abusive). Les rapports d'expertise suivent le même principe : ils doivent être validés par la modération avant de débloquer une vente qui en dépend.</p>
+
+  <h2 id="notifications">8. Notifications</h2>
+  <p>Active les notifications (email et/ou navigateur) depuis "Mon compte" pour être prévenu quand tu es dépassé sur une enchère, quand tu en remportes une, ou quand un de tes lots est validé, refusé ou vendu.</p>
+
+  <p style="margin-top:2.5rem; font-size:0.85rem;">Une question qui n'est pas couverte ici ? <a href="mailto:contact@kriee.fr">contact@kriee.fr</a></p>
+
+</main>
+
+<footer class="site-footer">
+  <strong>Kriee</strong> — plateforme d'enchères nautiques entre particuliers.
+  <div style="margin-top:0.8rem; font-size:0.78rem;"><a href="mentions-legales.html">Mentions légales</a> · <a href="confidentialite.html">Politique de confidentialité</a></div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase-client.js"></script>
+<script src="js/auth.js"></script>
+</body>
+</html>

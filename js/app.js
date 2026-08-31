@@ -234,6 +234,12 @@ document.querySelectorAll('.chip').forEach(chip => {
 // Recherche texte + tri (uniquement présents sur la page de recherche)
 const searchInput = document.getElementById('search-input');
 if (searchInput) {
+  // Préremplit depuis ?q=... si on arrive via la barre de recherche de l'accueil (ex. index.html)
+  const qParam = new URLSearchParams(location.search).get('q');
+  if (qParam) {
+    searchInput.value = qParam;
+    searchQuery = qParam;
+  }
   searchInput.addEventListener('input', (e) => {
     searchQuery = e.target.value;
     renderGrid();

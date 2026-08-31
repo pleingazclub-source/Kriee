@@ -463,9 +463,17 @@ a { color: inherit; }
   border-bottom: 2px solid transparent;
   margin-bottom: -1px;
   white-space: nowrap;
+  position: relative;
 }
 .spec-tab[aria-selected="true"] { color: var(--ink); border-color: var(--buoy); font-weight: 600; }
 .spec-tab:hover { color: var(--ink); }
+.tab-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 17px; height: 17px; padding: 0 4px;
+  background: var(--buoy); color: #fff;
+  border-radius: 999px; font-family: var(--font-data); font-size: 0.65rem; font-weight: 600;
+  position: relative; top: -1px; margin-left: 0.3rem;
+}
 .spec-tab.spec-tab--done::after { content: ' ✓'; color: var(--mistral); }
 .spec-panel { display: none; padding: 1.2rem 0; }
 .spec-panel.active { display: block; animation: panel-fade-in 0.32s ease; }

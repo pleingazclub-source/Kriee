@@ -63,7 +63,7 @@
   </a>
   <nav class="site-nav">
     <a href="encheres.html">Enchères en cours</a>
-    <a href="vendre.html">Vendre un bateau</a>
+    <a href="vendre.html" class="btn btn--primary">Vendre un bateau</a>
     <a href="#" class="btn btn--ghost" id="nav-login">Se connecter</a>
 
     <div class="user-menu" id="user-menu" style="display:none;">
@@ -97,7 +97,7 @@
 
   <div class="spec-tabs" role="tablist" id="account-tabs">
     <button class="spec-tab" data-tab="profil" aria-selected="true">Profil</button>
-    <button class="spec-tab" data-tab="activite" aria-selected="false">Mon activité</button>
+    <button class="spec-tab" data-tab="activite" aria-selected="false">Mon activité<span class="tab-badge" id="badge-activite" style="display:none;"></span></button>
   </div>
 
   <div class="spec-panel active" data-panel="profil">
@@ -224,9 +224,9 @@
 
   <div class="spec-tabs" role="tablist" id="activite-subtabs">
     <button class="spec-tab" data-subtab="favoris" aria-selected="true">Mes favoris</button>
-    <button class="spec-tab" data-subtab="encheres" aria-selected="false">Mes enchères</button>
-    <button class="spec-tab" data-subtab="lots" aria-selected="false">Mes lots en vente</button>
-    <button class="spec-tab" data-subtab="achats" aria-selected="false">Mes achats</button>
+    <button class="spec-tab" data-subtab="encheres" aria-selected="false">Mes enchères<span class="tab-badge" id="badge-encheres" style="display:none;"></span></button>
+    <button class="spec-tab" data-subtab="lots" aria-selected="false">Mes lots en vente<span class="tab-badge" id="badge-lots" style="display:none;"></span></button>
+    <button class="spec-tab" data-subtab="achats" aria-selected="false">Mes achats<span class="tab-badge" id="badge-achats" style="display:none;"></span></button>
   </div>
 
   <section class="spec-panel active" data-subpanel="favoris">
@@ -300,9 +300,70 @@ async function init() {
     loadMyLots(session.user.id),
     loadMyPurchases(session.user.id),
   ]);
+  loadNotificationBadges(session.user.id);
   if (location.hash === '#achats') {
     switchActiviteSubtab('achats');
+    markSubtabNotificationsRead('achats');
   }
+}
+
+// ---------- Badges de notification (façon leboncoin) sur les sous-onglets de "Mon activité" ----------
+// Associe chaque type de notification au sous-onglet concerné. 'sale_confirmed' est envoyé aussi
+// bien à l'acheteur qu'au vendeur avec le même type — on la rattache à "achats" par défaut : côté
+// vendeur, l'info reste de toute façon visible directement dans "Mes lots en vente".
+const NOTIF_TYPE_TO_SUBTAB = {
+  outbid: 'encheres',
+  auction_won: 'achats',
+  sale_accepted: 'achats',
+  sale_confirmed: 'achats',
+  lot_sold: 'lots',
+  lot_unsold: 'lots',
+  lot_approved: 'lots',
+  lot_rejected: 'lots',
+  new_bid: 'lots',
+  expertise_needed: 'lots',
+  expertise_approved: 'lots',
+  expertise_rejected: 'lots',
+};
+
+let currentUserId = null;
+
+async function loadNotificationBadges(userId) {
+  currentUserId = userId;
+  const { data } = await supabaseClient
+    .from('notifications')
+    .select('type')
+    .eq('user_id', userId)
+    .is('read_at', null);
+
+  const counts = { encheres: 0, lots: 0, achats: 0 };
+  (data || []).forEach(n => {
+    const subtab = NOTIF_TYPE_TO_SUBTAB[n.type];
+    if (subtab) counts[subtab]++;
+  });
+
+  let total = 0;
+  Object.entries(counts).forEach(([subtab, count]) => {
+    const badge = document.getElementById(`badge-${subtab}`);
+    if (!badge) return;
+    badge.textContent = count > 9 ? '9+' : String(count);
+    badge.style.display = count > 0 ? 'inline-flex' : 'none';
+    total += count;
+  });
+
+  const activiteBadge = document.getElementById('badge-activite');
+  activiteBadge.textContent = total > 9 ? '9+' : String(total);
+  activiteBadge.style.display = total > 0 ? 'inline-flex' : 'none';
+}
+
+// Marque comme lues les notifications du sous-onglet consulté, et fait disparaître son badge.
+async function markSubtabNotificationsRead(subtab) {
+  if (!currentUserId) return;
+  const types = Object.entries(NOTIF_TYPE_TO_SUBTAB).filter(([, s]) => s === subtab).map(([t]) => t);
+  if (!types.length) return;
+  await supabaseClient.from('notifications').update({ read_at: new Date().toISOString() })
+    .eq('user_id', currentUserId).in('type', types).is('read_at', null);
+  loadNotificationBadges(currentUserId);
 }
 
 // ---------- Préférences de notifications (email + push web) ----------
@@ -821,7 +882,10 @@ function switchActiviteSubtab(name) {
   document.querySelectorAll('[data-panel="activite"] > .spec-panel').forEach(p => p.classList.toggle('active', p.dataset.subpanel === name));
 }
 document.querySelectorAll('#activite-subtabs .spec-tab').forEach(tab => {
-  tab.addEventListener('click', () => switchActiviteSubtab(tab.dataset.subtab));
+  tab.addEventListener('click', () => {
+    switchActiviteSubtab(tab.dataset.subtab);
+    markSubtabNotificationsRead(tab.dataset.subtab);
+  });
 });
 
 // Ouvre l'onglet correspondant au #hash de l'URL (ex. compte.html#activite, ou compte.html#achats
