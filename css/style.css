@@ -111,6 +111,25 @@ a { color: inherit; }
   padding-bottom: 2px;
 }
 .site-nav a:not(.btn):hover, .site-nav a:not(.btn):focus-visible { border-color: var(--brass); }
+.header-search {
+  display: flex; align-items: stretch;
+  border: 1px solid #C9C2B2; border-radius: var(--radius); overflow: hidden;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.header-search:focus-within { border-color: var(--mistral); box-shadow: 0 0 0 3px rgba(44,110,142,0.15); }
+.header-search input {
+  border: none; outline: none; background: var(--foam);
+  padding: 0.5rem 0.9rem; width: 200px;
+  font-family: var(--font-body); font-size: 0.88rem; color: var(--ink);
+}
+.header-search input::placeholder { color: #8A94A0; }
+.header-search button {
+  border: none; cursor: pointer; padding: 0 0.9rem;
+  background: var(--ink); color: var(--foam);
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s ease;
+}
+.header-search button:hover { background: var(--buoy); }
 .btn {
   font-family: var(--font-body);
   font-weight: 600;
@@ -608,7 +627,15 @@ a { color: inherit; }
     gap: 0.9rem 1.2rem;
     font-size: 0.86rem;
   }
-  .user-menu, #nav-login { margin-left: auto; }
+  /* Contrairement au desktop (une seule ligne, "Se connecter" plaqué à droite via auto), sur
+     mobile on laisse le bouton suivre le flux normal des liens — sinon il finit isolé, poussé
+     à droite sur sa propre ligne dès que les autres éléments ne tiennent plus sur une seule
+     rangée (exactement ce qui se passait avant ce correctif). */
+  .user-menu, #nav-login { margin-left: 0; }
+  /* La recherche passe sur sa propre ligne pleine largeur plutôt que de se battre pour la place
+     avec les liens. */
+  #header-search-form { order: 5; flex-basis: 100%; margin-left: 0 !important; }
+  .header-search input { width: auto; flex: 1; }
 
   .hero { padding: 3rem 1.2rem 2.5rem; }
   .hero__actions { flex-direction: column; }
