@@ -12,6 +12,7 @@ async function initAuthNav() {
   const nameEl = document.getElementById('user-menu-name');
   const emailEl = document.getElementById('user-menu-email');
   const adminLink = document.getElementById('user-menu-admin-link');
+  const activiteBadge = document.getElementById('user-menu-activite-badge');
   const logoutBtn = document.getElementById('user-menu-logout');
 
   toggle.addEventListener('click', (e) => {
@@ -24,6 +25,20 @@ async function initAuthNav() {
     await supabaseClient.auth.signOut();
     location.href = 'index.html';
   });
+
+  // Compteur de notifications non lues, affiché sur "Mon activité" dans ce menu déroulant —
+  // même donnée que les badges par sous-onglet de compte.html, mais visible depuis n'importe
+  // quelle page sans avoir à ouvrir le compte.
+  async function refreshActiviteBadge(userId) {
+    if (!activiteBadge) return;
+    const { count } = await supabaseClient
+      .from('notifications')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .is('read_at', null);
+    activiteBadge.textContent = count > 9 ? '9+' : String(count || 0);
+    activiteBadge.style.display = count > 0 ? 'inline-flex' : 'none';
+  }
 
   let renderGen = 0;
   async function render(session) {
@@ -46,6 +61,7 @@ async function initAuthNav() {
       nameEl.textContent = displayName;
       emailEl.textContent = session.user.email;
       adminLink.style.display = (profile && profile.is_admin) ? 'block' : 'none';
+      refreshActiviteBadge(session.user.id);
     } else {
       navLogin.href = 'connexion.html';
       navLogin.style.display = 'inline-block';
