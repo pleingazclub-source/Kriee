@@ -147,6 +147,64 @@
         <span class="revenue-potential__label"> de revenu potentiel sur les enchères en cours dont la réserve est déjà atteinte — encore susceptible d'augmenter avant clôture</span>
       </div>
     </div>
+
+    <div class="revenue-dash" style="margin-top:1.5rem;">
+      <p class="revenue-dash__title">Performance des annonces</p>
+      <div class="revenue-grid">
+        <div class="revenue-grid__item">
+          <span class="revenue-grid__num" id="kpi-sell-rate">—</span>
+          <span class="revenue-grid__label">Taux de vente (lots clôturés)</span>
+        </div>
+        <div class="revenue-grid__item">
+          <span class="revenue-grid__num" id="kpi-avg-price">—</span>
+          <span class="revenue-grid__label">Prix marteau moyen</span>
+        </div>
+        <div class="revenue-grid__item">
+          <span class="revenue-grid__num" id="kpi-avg-bids">—</span>
+          <span class="revenue-grid__label">Enchères moyennes / lot</span>
+        </div>
+        <div class="revenue-grid__item">
+          <span class="revenue-grid__num" id="kpi-new-users">—</span>
+          <span class="revenue-grid__label">Nouveaux inscrits (30j)</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="revenue-dash" style="margin-top:1.5rem;">
+      <p class="revenue-dash__title">Revenu des 30 derniers jours</p>
+      <canvas id="revenue-chart" height="90"></canvas>
+    </div>
+
+    <div class="revenue-dash" style="margin-top:1.5rem;">
+      <p class="revenue-dash__title">Performance par catégorie</p>
+      <table class="admin-table">
+        <thead>
+          <tr><th>Catégorie</th><th>Lots actifs</th><th>Lots clôturés</th><th>Taux de vente</th><th>Revenu généré</th></tr>
+        </thead>
+        <tbody id="category-perf-rows"></tbody>
+      </table>
+    </div>
+
+    <div class="revenue-dash" style="margin-top:1.5rem;">
+      <p class="revenue-dash__title">Lots à surveiller — en ligne, sans aucune enchère, clôture &lt; 48h</p>
+      <table class="admin-table">
+        <thead>
+          <tr><th>Lot</th><th>Vendeur</th><th>Clôture</th></tr>
+        </thead>
+        <tbody id="watch-rows"></tbody>
+      </table>
+      <p id="watch-empty" style="color:#5A6772; padding:1rem 0; display:none;">Aucun lot dans ce cas pour l'instant.</p>
+    </div>
+
+    <div class="revenue-dash" style="margin-top:1.5rem;">
+      <p class="revenue-dash__title">Lots les plus vus</p>
+      <table class="admin-table">
+        <thead>
+          <tr><th>Lot</th><th>Catégorie</th><th>Vues</th><th>Favoris</th><th>Statut</th></tr>
+        </thead>
+        <tbody id="top-viewed-rows"></tbody>
+      </table>
+    </div>
   </div>
 
   <div class="spec-panel" data-panel="lots">
@@ -247,11 +305,14 @@
   <div style="margin-top:0.8rem; font-size:0.78rem;"><a href="mentions-legales.html">Mentions légales</a> · <a href="confidentialite.html">Politique de confidentialité</a></div>
 </footer>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/supabase-client.js"></script>
 <script src="js/auth.js"></script>
 <script>
 let allLots = [];
+let allBids = [];
+let allProfiles = [];
 let activeFilter = 'draft';
 let activeReserveFilter = 'all';
 
@@ -274,6 +335,7 @@ async function init() {
   loadFlaggedBuyers();
   loadFlaggedBadge();
   loadUsers();
+  loadDashboardExtras();
 
   supabaseClient.channel('admin:lots')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'lots' }, loadLots)
@@ -381,10 +443,139 @@ function renderRevenueDashboard() {
   document.getElementById('rev-potential').textContent = formatEUR(potentialTotal);
 }
 
+// ---------- Pilotage : bids + inscriptions, chargés une fois, réutilisés par tous les blocs ----------
+async function loadDashboardExtras() {
+  const [{ data: bids }, { data: profiles }] = await Promise.all([
+    supabaseClient.from('bids').select('lot_id, bidder_id, created_at'),
+    supabaseClient.from('profiles').select('id, created_at'),
+  ]);
+  allBids = bids || [];
+  allProfiles = profiles || [];
+  render();
+}
+
+let revenueChart = null;
+
+function renderDashboardExtras() {
+  renderPerformanceKPIs();
+  renderRevenueChart();
+  renderCategoryPerformance();
+  renderWatchList();
+  renderTopViewed();
+}
+
+function bidsForLot(lotId) { return allBids.filter(b => b.lot_id === lotId); }
+
+function renderPerformanceKPIs() {
+  const closed = allLots.filter(l => l.status === 'sold' || l.status === 'unsold');
+  const sold = allLots.filter(l => l.status === 'sold');
+  const sellRate = closed.length ? Math.round((sold.length / closed.length) * 100) : null;
+  document.getElementById('kpi-sell-rate').textContent = sellRate === null ? '—' : `${sellRate}%`;
+
+  const avgPrice = sold.length ? sold.reduce((sum, l) => sum + l.current_price, 0) / sold.length : null;
+  document.getElementById('kpi-avg-price').textContent = avgPrice === null ? '—' : formatEUR(Math.round(avgPrice));
+
+  const liveOrClosed = allLots.filter(l => ['live', 'sold', 'unsold'].includes(l.status));
+  const avgBids = liveOrClosed.length
+    ? liveOrClosed.reduce((sum, l) => sum + bidsForLot(l.id).length, 0) / liveOrClosed.length
+    : null;
+  document.getElementById('kpi-avg-bids').textContent = avgBids === null ? '—' : avgBids.toFixed(1);
+
+  const cutoff30 = Date.now() - 30 * 24 * 60 * 60 * 1000;
+  const newUsers = allProfiles.filter(p => new Date(p.created_at).getTime() >= cutoff30).length;
+  document.getElementById('kpi-new-users').textContent = String(newUsers);
+}
+
+function renderRevenueChart() {
+  const canvas = document.getElementById('revenue-chart');
+  if (!canvas || typeof Chart === 'undefined') return;
+
+  const days = [...Array(30)].map((_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (29 - i));
+    return d;
+  });
+  const sold = allLots.filter(l => l.status === 'sold');
+  const revenueByDay = days.map(d => {
+    const dayStr = d.toDateString();
+    return sold.filter(l => new Date(l.ends_at).toDateString() === dayStr)
+      .reduce((sum, l) => sum + buyerFeeHT(l), 0);
+  });
+
+  if (revenueChart) revenueChart.destroy();
+  revenueChart = new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels: days.map(d => d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })),
+      datasets: [{ data: revenueByDay, backgroundColor: '#C7401F' }],
+    },
+    options: {
+      plugins: { legend: { display: false } },
+      scales: { y: { ticks: { callback: (v) => formatEUR(v) } } },
+    },
+  });
+}
+
+function renderCategoryPerformance() {
+  const byCategory = {};
+  allLots.forEach(l => {
+    const label = l.categories?.label || '—';
+    if (!byCategory[label]) byCategory[label] = { active: 0, closed: 0, sold: 0, revenue: 0 };
+    if (l.status === 'live' || l.status === 'draft' || l.status === 'scheduled') byCategory[label].active++;
+    if (l.status === 'sold' || l.status === 'unsold') {
+      byCategory[label].closed++;
+      if (l.status === 'sold') { byCategory[label].sold++; byCategory[label].revenue += buyerFeeHT(l); }
+    }
+  });
+
+  const rows = document.getElementById('category-perf-rows');
+  const entries = Object.entries(byCategory).sort((a, b) => b[1].revenue - a[1].revenue);
+  rows.innerHTML = entries.map(([label, c]) => `
+    <tr>
+      <td><strong>${label}</strong></td>
+      <td>${c.active}</td>
+      <td>${c.closed}</td>
+      <td>${c.closed ? Math.round((c.sold / c.closed) * 100) + '%' : '—'}</td>
+      <td>${formatEUR(c.revenue)}</td>
+    </tr>
+  `).join('') || '<tr><td colspan="5" style="color:#5A6772;">Pas encore de données.</td></tr>';
+}
+
+function renderWatchList() {
+  const cutoff48h = Date.now() + 48 * 60 * 60 * 1000;
+  const watch = allLots.filter(l =>
+    l.status === 'live' && bidsForLot(l.id).length === 0 && new Date(l.ends_at).getTime() <= cutoff48h
+  );
+  const rows = document.getElementById('watch-rows');
+  document.getElementById('watch-empty').style.display = watch.length ? 'none' : 'block';
+  rows.innerHTML = watch.map(l => `
+    <tr>
+      <td><strong>${l.title}</strong></td>
+      <td>${l.profiles?.full_name || '—'}</td>
+      <td>${new Date(l.ends_at).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</td>
+    </tr>
+  `).join('');
+}
+
+function renderTopViewed() {
+  const top = [...allLots].sort((a, b) => (b.view_count || 0) - (a.view_count || 0)).slice(0, 5);
+  const rows = document.getElementById('top-viewed-rows');
+  rows.innerHTML = top.map(l => `
+    <tr>
+      <td><strong>${l.title}</strong></td>
+      <td>${l.categories?.label || '—'}</td>
+      <td>${l.view_count || 0}</td>
+      <td>${l.favorite_count || 0}</td>
+      <td><span style="font-family:var(--font-data); font-size:0.7rem; padding:0.2rem 0.55rem; border-radius:999px; background:#F1EEE6; color:#5A6772;">${l.status}</span></td>
+    </tr>
+  `).join('');
+}
+
 function render() {
   renderRevenueDashboard();
   renderExpertiseModeration();
   updateBadgeCount('badge-lots', allLots.filter(l => l.status === 'draft').length);
+  renderDashboardExtras();
 
   const rows = document.getElementById('admin-rows');
   let filtered = activeFilter === 'all' ? allLots : allLots.filter(l => l.status === activeFilter);
