@@ -45,6 +45,15 @@ function formatEUR(amount) {
   return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(amount);
 }
 
+// Format court réutilisé partout où une date/heure doit apparaître dans un tableau (compte,
+// modération) — ex. "28 août" ou "28 août 14:30" avec l'heure si demandée.
+function formatDate(iso, withTime = false) {
+  if (!iso) return '—';
+  const opts = { day: 'numeric', month: 'short' };
+  if (withTime) { opts.hour = '2-digit'; opts.minute = '2-digit'; }
+  return new Intl.DateTimeFormat('fr-FR', opts).format(new Date(iso));
+}
+
 function formatCountdown(endsAt) {
   const diff = new Date(endsAt).getTime() - Date.now();
   if (diff <= 0) return 'Clôturé';

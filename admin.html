@@ -229,6 +229,7 @@
           <th></th>
           <th>Lot</th>
           <th>Vendeur</th>
+          <th>Déposé le</th>
           <th>Enchère / Réserve</th>
           <th>Statut</th>
           <th>Actions</th>
@@ -243,7 +244,7 @@
     <p class="revenue-dash__title" style="color:var(--ink); margin-bottom:1rem;">Rapports d'expertise à valider</p>
     <table class="admin-table">
       <thead>
-        <tr><th>Lot</th><th>Vendeur</th><th>Rapport</th><th>Actions</th></tr>
+        <tr><th>Lot</th><th>Vendeur</th><th>Envoyé le</th><th>Rapport</th><th>Actions</th></tr>
       </thead>
       <tbody id="expertise-rows"></tbody>
     </table>
@@ -387,6 +388,7 @@ function renderExpertiseModeration() {
     <tr>
       <td><strong>${l.title}</strong><br><span style="color:#5A6772; font-size:0.8rem;">Prix de départ : ${formatEUR(l.starting_price)}</span></td>
       <td>${l.profiles?.full_name || '—'}</td>
+      <td>${formatDate(l.expertise_submitted_at, true)}</td>
       <td><a href="${l.expertise_report_url}" target="_blank" rel="noopener">📄 Voir le rapport</a></td>
       <td>
         <div style="display:flex; gap:0.4rem;">
@@ -592,6 +594,7 @@ function render() {
       <td>${l.cover_image_url ? `<img src="${l.cover_image_url}">` : ''}</td>
       <td><strong>${l.title}</strong><br><span style="color:#5A6772; font-size:0.8rem;">${l.categories?.label || ''} — ${l.region}</span></td>
       <td>${l.profiles?.full_name || '—'}</td>
+      <td>${formatDate(l.created_at)}</td>
       <td class="reserve-cell">
         ${formatEUR(l.current_price)} <span class="reserve-badge ${met ? 'reserve-badge--met' : 'reserve-badge--not'}">${met ? '✓ Réserve atteinte' : 'Réserve non atteinte'}</span>
         <span class="reserve-cell__gap">Réserve : ${formatEUR(l.reserve_price)}${met ? '' : ` (manque ${formatEUR(gap)})`}</span>

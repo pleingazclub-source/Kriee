@@ -232,7 +232,7 @@
   <section class="spec-panel active" data-subpanel="favoris">
     <table class="account-table" id="my-favorites-table">
       <thead>
-        <tr><th></th><th>Lot</th><th>Enchère actuelle</th><th>Statut</th><th></th></tr>
+        <tr><th></th><th>Lot</th><th>Enchère actuelle</th><th>Clôture</th><th>Statut</th><th></th></tr>
       </thead>
       <tbody id="my-favorites-rows"></tbody>
     </table>
@@ -242,7 +242,7 @@
   <section class="spec-panel" data-subpanel="encheres">
     <table class="account-table" id="my-bids-table">
       <thead>
-        <tr><th></th><th>Lot</th><th>Ma dernière enchère</th><th>Ton plafond</th><th>Enchère actuelle</th><th>Statut</th><th></th></tr>
+        <tr><th></th><th>Lot</th><th>Ma dernière enchère</th><th>Ton plafond</th><th>Enchère actuelle</th><th>Clôture</th><th>Statut</th><th></th></tr>
       </thead>
       <tbody id="my-bids-rows"></tbody>
     </table>
@@ -257,7 +257,7 @@
     </div>
     <table class="account-table" id="my-lots-table">
       <thead>
-        <tr><th></th><th>Lot</th><th>Prix départ</th><th>Réserve</th><th>Enchère actuelle</th><th>Statut</th><th></th></tr>
+        <tr><th></th><th>Lot</th><th>Déposé le</th><th>Prix départ</th><th>Réserve</th><th>Enchère actuelle</th><th>Clôture</th><th>Statut</th><th></th></tr>
       </thead>
       <tbody id="my-lots-rows"></tbody>
     </table>
@@ -399,7 +399,7 @@ async function initNotificationPrefs(userId) {
 async function loadMyFavorites(userId) {
   const { data, error } = await supabaseClient
     .from('favorites')
-    .select('lot_id, lots(id, title, current_price, status, cover_image_url, region)')
+    .select('lot_id, lots(id, title, current_price, status, cover_image_url, region, ends_at)')
     .eq('user_id', userId)
     .order('created_at', { ascending: false });
 
@@ -416,6 +416,7 @@ async function loadMyFavorites(userId) {
       <td>${l.cover_image_url ? `<img src="${l.cover_image_url}">` : ''}</td>
       <td><strong>${l.title}</strong><br><span style="color:#5A6772; font-size:0.8rem;">${l.region}</span></td>
       <td>${formatEUR(l.current_price)}</td>
+      <td>${formatDate(l.ends_at)}</td>
       <td><span class="status-pill status-pill--${statusPillClass(l)}" style="font-family:var(--font-data); font-size:0.7rem; padding:0.2rem 0.55rem; border-radius:999px; background:#F1EEE6; color:#5A6772;">${l.status}</span></td>
       <td><a href="lot.html?id=${l.id}" class="btn btn--ghost btn--sm" style="padding:0.35rem 0.7rem; font-size:0.78rem; text-decoration:none;">Voir</a></td>
     </tr>
@@ -528,9 +529,11 @@ function renderMyLots() {
         ${relistButtonHTML}
         <div id="contact-${sale?.id}"></div>
       </td>
+      <td>${formatDate(l.created_at)}</td>
       <td>${formatEUR(l.starting_price)}</td>
       <td>${formatEUR(l.reserve_price)}</td>
       <td>${formatEUR(l.current_price)}</td>
+      <td>${formatDate(l.ends_at)}</td>
       <td><span class="status-pill status-pill--${statusPillClass(l)}" style="font-family:var(--font-data); font-size:0.7rem; padding:0.2rem 0.55rem; border-radius:999px; background:#F1EEE6; color:#5A6772;">${l.status}</span></td>
       <td style="white-space:nowrap;">
         ${l.status === 'cancelled' ? `<a href="vendre.html?edit=${l.id}" class="btn btn--primary btn--sm" style="padding:0.35rem 0.7rem; font-size:0.78rem; text-decoration:none;">Corriger et resoumettre</a> <button type="button" class="btn--danger btn--sm" data-delete-lot-id="${l.id}" style="padding:0.35rem 0.7rem; font-size:0.78rem;">Supprimer</button>` : ''}
@@ -594,6 +597,7 @@ async function loadMyBids(userId) {
       <td>${formatEUR(b.amount)}</td>
       <td><strong>${formatEUR(b.max_auto_amount)}</strong></td>
       <td>${formatEUR(lot.current_price)}</td>
+      <td>${formatDate(lot.ends_at)}</td>
       <td><span class="bid-status ${statusClass}">${statusLabel}</span></td>
       <td><a href="lot.html?id=${lot.id}" class="btn btn--ghost btn--sm" style="padding:0.35rem 0.7rem; font-size:0.78rem; text-decoration:none;">Voir</a></td>
     </tr>
@@ -652,7 +656,7 @@ function saleCardHTML(s, role) {
           ${lot?.cover_image_url ? `<img src="${lot.cover_image_url}" alt="" class="sale-card__thumb">` : ''}
           <div>
             <p class="sale-card__title">${lot?.title || 'Lot'}</p>
-            <span style="color:#5A6772; font-size:0.85rem;">${lot?.region || ''}</span>
+            <span style="color:#5A6772; font-size:0.85rem;">${lot?.region || ''} — adjugé le ${formatDate(s.created_at)}</span>
           </div>
         </div>
         <span class="sale-card__price">${formatEUR(role === 'seller' ? s.hammer_price : s.buyer_total_price)}</span>
