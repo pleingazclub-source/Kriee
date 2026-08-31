@@ -35,11 +35,12 @@ Un simple `create or replace view` ne suffit PAS. C'est déjà arrivé plusieurs
 - Anti-sniping : +3 min si enchère dans les 3 dernières minutes
 - Un acheteur ne peut être en tête que sur un seul bateau à la fois (accastillage libre)
 - Confirmation avant validation d'une enchère (évite les erreurs de saisie)
-- Calcul du prix acheteur : prix marteau + 18% frais + TVA 21% sur les frais (vendeur payé au marteau, 0 frais)
+- Calcul du prix acheteur : prix marteau + frais de vente dégressifs (18% jusqu'à 25k€, 12% de 25k à 100k€, 8% au-delà) + TVA 21% sur les frais (vendeur payé au marteau, 0 frais)
 - Navigation photo gauche/droite sur la fiche lot
 
 **Dépôt et modération**
 - Wizard de dépôt en 7 étapes (titre/catégorie, localisation, prix/durée, caractéristiques, équipements à bord, description/docs, récapitulatif) — écrans allégés, un thème par écran
+- 9 catégories (voile, moteur, semi-rigide, catamaran, jet-ski, pêche & travail, péniche & habitable, remorque, équipement) — toute nouvelle catégorie non "équipement" hérite automatiquement des règles bateau (checklist, seuil d'expertise, une enchère à la fois)
 - Upload réel des photos/vidéo/documents vers Supabase Storage
 - Checklist de transparence (déclaration vendeur, gratuite) sur tous les bateaux
 - **Rapport d'expertise obligatoire au-delà de 5000€ de prix de départ** — fournissable avant ou après l'enchère ; si après, bloque la révélation des coordonnées tant qu'il n'est pas fourni **et validé par la modération**
@@ -74,6 +75,8 @@ Un simple `create or replace view` ne suffit PAS. C'est déjà arrivé plusieurs
 - Header : bouton "Déposer un lot" mis en avant + barre de recherche (ordre inspiré leboncoin), header minimal pendant le dépôt
 
 ## Reste à faire avant un vrai lancement
+
+- **`sql/schema.sql` a pris du retard sur la base réellement en ligne** : plusieurs migrations (notifications, checklist/expertise, catégories, frais dégressifs...) ont été appliquées directement via l'éditeur SQL Supabase, sans jamais être reportées dans ce fichier source. Il ne reflète donc plus fidèlement l'état actuel — à réconcilier un jour, par exemple via `supabase db dump` sur le projet live.
 
 - **Paiement Lemonway** : architecture posée (`sales.payment_status`, `profiles.lemonway_wallet_id`/`lemonway_kyc_status`, deux Edge Functions scaffoldées) mais jamais activée, faute de compte Lemonway actif. Chaque vendeur devra avoir son propre compte Lemonway + KYC validé.
 - **Médiateur de la consommation** : encart à compléter dans `mentions-legales.html` (choisir un médiateur agréé, ex. CM2C)
