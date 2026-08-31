@@ -483,7 +483,7 @@ function renderMyLots() {
     let saleActionHTML = '';
     if (sale && sale.status !== 'cancelled') {
       if (sale.status === 'confirmed') {
-        saleActionHTML = `<button type="button" class="btn btn--ghost btn--sm" data-sale-reveal="${sale.id}" style="margin-top:0.4rem; display:block;">Voir les coordonnées</button>`;
+        saleActionHTML = `${paymentDeadlineHTML(sale.confirmed_at)}<button type="button" class="btn btn--ghost btn--sm" data-sale-reveal="${sale.id}" style="margin-top:0.4rem; display:block;">Voir les coordonnées</button>`;
       } else if (sale.status === 'awaiting_expertise') {
         if (l.expertise_status === 'pending') {
           saleActionHTML = `<div style="background:var(--chalk); padding:0.7rem 0.9rem; border-radius:3px; font-size:0.78rem; margin-top:0.4rem;">Rapport envoyé, en attente de validation par Kriee — les coordonnées se débloqueront automatiquement une fois validé.</div>`;
@@ -624,6 +624,21 @@ async function loadMyPurchases(userId) {
   wireSaleActions();
 }
 
+// Date butoir de paiement : 7 jours après confirmation mutuelle (coordonnées révélées).
+// Pas de vérification automatique du paiement lui-même (Lemonway pas encore actif) — juste
+// de la visibilité, avec un code couleur d'urgence et un rappel automatique par email/push
+// (voir check_payment_deadlines() côté base, exécutée chaque jour).
+function paymentDeadlineHTML(confirmedAt) {
+  if (!confirmedAt) return '';
+  const deadline = new Date(new Date(confirmedAt).getTime() + 7 * 24 * 60 * 60 * 1000);
+  const daysLeft = Math.ceil((deadline - Date.now()) / (24 * 60 * 60 * 1000));
+  let color = 'var(--mistral)';
+  let label = `Paiement à finaliser avant le ${formatDate(deadline, true)}`;
+  if (daysLeft < 0) { color = 'var(--buoy)'; label = `Date limite de paiement dépassée depuis ${Math.abs(daysLeft)} j (${formatDate(deadline, true)})`; }
+  else if (daysLeft <= 2) { color = 'var(--buoy)'; label = `Paiement à finaliser avant le ${formatDate(deadline, true)} — plus que ${daysLeft} j`; }
+  return `<p style="font-size:0.82rem; color:${color}; font-weight:600; margin:0 0 0.6rem;">${label}</p>`;
+}
+
 function saleCardHTML(s, role) {
   const lot = s.lots;
   const myDecision = role === 'seller' ? s.seller_accepted : s.buyer_confirmed;
@@ -633,6 +648,7 @@ function saleCardHTML(s, role) {
   let actionsHTML = '';
   if (s.status === 'confirmed') {
     actionsHTML = `<div class="sale-card__contact" id="contact-${s.id}">
+      ${paymentDeadlineHTML(s.confirmed_at)}
       <button type="button" class="btn btn--ghost btn--sm" data-sale-reveal="${s.id}">Voir les coordonnées</button>
     </div>`;
   } else if (myDecision === null || myDecision === undefined) {

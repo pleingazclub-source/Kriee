@@ -107,6 +107,8 @@ const NOTIF_TYPE_TO_SUBTAB = {
   auction_won: 'achats',
   sale_accepted: 'achats',
   sale_confirmed: 'achats',
+  payment_deadline_soon: 'achats',
+  payment_overdue: 'achats',
   lot_sold: 'lots',
   lot_unsold: 'lots',
   lot_approved: 'lots',
