@@ -81,7 +81,7 @@ async function loadLots() {
 
   const { data, error } = await supabaseClient
     .from('lots_with_buyer_price')
-    .select('*, categories(slug, flag_code)')
+    .select('*, categories(slug, flag_code, label)')
     .in('status', ['live', 'scheduled'])
     .order('ends_at', { ascending: true });
 
@@ -92,6 +92,9 @@ async function loadLots() {
     lots = data.map(l => ({
       id: l.id,
       title: l.title,
+      description: l.description || '',
+      category_label: l.categories?.label || '',
+      specs: l.specs || {},
       category_flag: l.categories?.flag_code || '·',
       category_slug: l.categories?.slug || 'equipement',
       equipment_subtype: l.specs?.general?.["Type d'équipement"] || null,
@@ -181,10 +184,20 @@ function renderGrid() {
   }
 
   if (searchQuery.trim()) {
-    const q = searchQuery.trim().toLowerCase();
-    filtered = filtered.filter(l =>
-      l.title.toLowerCase().includes(q) || l.region.toLowerCase().includes(q) || (l.port_location || '').toLowerCase().includes(q)
-    );
+    // Texte combiné (titre, région, port, catégorie, description, et toutes les valeurs des
+    // caractéristiques — marque, modèle, année, etc.) plutôt que 3 champs seulement.
+    // Recherche mot par mot (chaque mot doit apparaître quelque part, dans n'importe quel ordre)
+    // au lieu d'exiger que toute la requête corresponde à une phrase exacte — sinon chercher
+    // "voilier bénéteau" ne trouvait jamais rien si ces deux mots n'étaient pas côte à côte.
+    const words = searchQuery.trim().toLowerCase().split(/\s+/);
+    filtered = filtered.filter(l => {
+      const specsText = Object.values(l.specs || {})
+        .flatMap(section => Object.values(section || {}))
+        .join(' ');
+      const haystack = [l.title, l.region, l.port_location, l.category_label, l.description, specsText]
+        .join(' ').toLowerCase();
+      return words.every(w => haystack.includes(w));
+    });
   }
 
   filtered = [...filtered].sort((a, b) => {
