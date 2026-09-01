@@ -294,6 +294,10 @@ async function init() {
   document.getElementById('account-content').style.display = 'block';
   loadMyProfile(session.user);
   initNotificationPrefs(session.user.id);
+  // Chargé avant les tableaux (pas juste en parallèle) : chaque ligne a besoin de savoir si son
+  // lot a une notification non lue pour afficher le repère — sans ça, impossible de dire quel
+  // lot précisément est concerné par le badge du sous-onglet.
+  await loadNotificationBadges(session.user.id);
   // Attend les 4 sections (pas seulement achats) avant de basculer le sous-onglet — sinon une
   // table encore en cours de chargement grandit après coup une fois le sous-onglet déjà affiché.
   await Promise.all([
@@ -302,7 +306,6 @@ async function init() {
     loadMyLots(session.user.id),
     loadMyPurchases(session.user.id),
   ]);
-  loadNotificationBadges(session.user.id);
   if (location.hash === '#achats') {
     switchActiviteSubtab('achats');
     markSubtabNotificationsRead('achats');
@@ -313,19 +316,24 @@ async function init() {
 // NOTIF_TYPE_TO_SUBTAB est défini dans supabase-client.js (partagé avec auth.js).
 
 let currentUserId = null;
+// Lots concernés par au moins une notification non lue — utilisé pour afficher un petit repère
+// (●) directement sur la ligne du lot dans les tableaux, en plus du badge global du sous-onglet.
+let unreadLotIds = new Set();
 
 async function loadNotificationBadges(userId) {
   currentUserId = userId;
   const { data } = await supabaseClient
     .from('notifications')
-    .select('type')
+    .select('type, lot_id')
     .eq('user_id', userId)
     .is('read_at', null);
 
   const counts = { encheres: 0, lots: 0, achats: 0 };
+  unreadLotIds = new Set();
   (data || []).forEach(n => {
     const subtab = NOTIF_TYPE_TO_SUBTAB[n.type];
     if (subtab) counts[subtab]++;
+    if (n.lot_id) unreadLotIds.add(n.lot_id);
   });
 
   let total = 0;
@@ -342,14 +350,26 @@ async function loadNotificationBadges(userId) {
   activiteBadge.style.display = total > 0 ? 'inline-flex' : 'none';
 }
 
-// Marque comme lues les notifications du sous-onglet consulté, et fait disparaître son badge.
+// Repère visuel sur une ligne de tableau — même pastille orange que les badges, mais en petit
+// point plein plutôt qu'un chiffre, pour ne pas surcharger une ligne de lot.
+function unreadDotHTML(lotId) {
+  return unreadLotIds.has(lotId)
+    ? '<span title="Nouveau" style="display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--buoy); margin-right:0.4rem; vertical-align:middle;"></span>'
+    : '';
+}
+
+// Marque comme lues les notifications du sous-onglet consulté, et fait disparaître son badge
+// ainsi que les repères sur les lignes concernées (en re-rendant le tableau du sous-onglet).
 async function markSubtabNotificationsRead(subtab) {
   if (!currentUserId) return;
   const types = Object.entries(NOTIF_TYPE_TO_SUBTAB).filter(([, s]) => s === subtab).map(([t]) => t);
   if (!types.length) return;
   await supabaseClient.from('notifications').update({ read_at: new Date().toISOString() })
     .eq('user_id', currentUserId).in('type', types).is('read_at', null);
-  loadNotificationBadges(currentUserId);
+  await loadNotificationBadges(currentUserId);
+  if (subtab === 'lots') renderMyLots();
+  else if (subtab === 'encheres') loadMyBids(currentUserId);
+  else if (subtab === 'achats') loadMyPurchases(currentUserId);
 }
 
 // ---------- Préférences de notifications (email + push web) ----------
@@ -416,7 +436,7 @@ async function loadMyFavorites(userId) {
     return `
     <tr class="row-clickable" onclick="if(!event.target.closest('a,button,input,label')) location.href='lot.html?id=${l.id}'">
       <td>${l.cover_image_url ? `<img src="${l.cover_image_url}">` : ''}</td>
-      <td><strong>${l.title}</strong><br><span style="color:#5A6772; font-size:0.8rem;">${l.region}</span></td>
+      <td>${unreadDotHTML(l.id)}<strong>${l.title}</strong><br><span style="color:#5A6772; font-size:0.8rem;">${l.region}</span></td>
       <td>${formatEUR(l.current_price)}</td>
       <td>${formatDate(l.ends_at)}</td>
       <td><span class="status-pill status-pill--${statusPillClass(l)}" style="font-family:var(--font-data); font-size:0.7rem; padding:0.2rem 0.55rem; border-radius:999px; background:#F1EEE6; color:#5A6772;">${l.status}</span></td>
@@ -523,7 +543,7 @@ function renderMyLots() {
     <tr class="row-clickable" onclick="if(!event.target.closest('a,button,input,label')) location.href='lot.html?id=${l.id}'">
       <td>${l.cover_image_url ? `<img src="${l.cover_image_url}">` : ''}</td>
       <td>
-        <strong>${l.title}</strong><br><span style="color:#5A6772; font-size:0.8rem;">${l.categories?.label || ''} — ${l.region}</span>
+        ${unreadDotHTML(l.id)}<strong>${l.title}</strong><br><span style="color:#5A6772; font-size:0.8rem;">${l.categories?.label || ''} — ${l.region}</span>
         ${l.moderation_note ? `<div class="moderation-note ${l.status === 'deleted' ? 'moderation-note--deleted' : ''}">
           <strong>${l.status === 'deleted' ? 'Motif de suppression' : 'Motif de refus'} :</strong> ${l.moderation_note}
         </div>` : ''}
@@ -595,7 +615,7 @@ async function loadMyBids(userId) {
     return `
     <tr class="row-clickable" onclick="if(!event.target.closest('a,button,input,label')) location.href='lot.html?id=${lot.id}'">
       <td>${lot.cover_image_url ? `<img src="${lot.cover_image_url}">` : ''}</td>
-      <td><strong>${lot.title}</strong><br><span style="color:#5A6772; font-size:0.8rem;">${lot.region}</span></td>
+      <td>${unreadDotHTML(lot.id)}<strong>${lot.title}</strong><br><span style="color:#5A6772; font-size:0.8rem;">${lot.region}</span></td>
       <td>${formatEUR(b.amount)}</td>
       <td><strong>${formatEUR(b.max_auto_amount)}</strong></td>
       <td>${formatEUR(lot.current_price)}</td>
@@ -673,7 +693,7 @@ function saleCardHTML(s, role) {
         <div class="sale-card__top-left">
           ${lot?.cover_image_url ? `<img src="${lot.cover_image_url}" alt="" class="sale-card__thumb">` : ''}
           <div>
-            <p class="sale-card__title">${lot?.title || 'Lot'}</p>
+            <p class="sale-card__title">${unreadDotHTML(s.lot_id)}${lot?.title || 'Lot'}</p>
             <span style="color:#5A6772; font-size:0.85rem;">${lot?.region || ''} — adjugé le ${formatDate(s.created_at)}</span>
           </div>
         </div>
