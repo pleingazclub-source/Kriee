@@ -30,6 +30,11 @@ insert into public.categories (slug, label, flag_code) values
   ('voile', 'Voile', 'V'),
   ('moteur', 'Moteur', 'M'),
   ('semi-rigide', 'Semi-rigide', 'S'),
+  ('catamaran', 'Catamaran', 'C'),
+  ('jetski', 'Jet-ski', 'J'),
+  ('peche-travail', 'Pêche & travail', 'T'),
+  ('habitable', 'Péniche & habitable', 'H'),
+  ('remorque', 'Remorque', 'R'),
   ('equipement', 'Équipement & accastillage', 'E');
 
 alter table public.categories enable row level security;
@@ -74,7 +79,11 @@ create policy "vendeur voit ses brouillons" on public.lots
 create policy "vendeur crée ses lots" on public.lots
   for insert with check (auth.uid() = seller_id);
 create policy "vendeur modifie ses lots avant mise en ligne" on public.lots
-  for update using (auth.uid() = seller_id and status = 'draft');
+  -- Autorise aussi le vendeur à corriger/resoumettre ou supprimer lui-même un lot refusé
+  -- ('cancelled'), pas seulement un brouillon — le WITH CHECK empêche de sortir vers un
+  -- statut arbitraire (ex. 'live', 'sold').
+  for update using (auth.uid() = seller_id and status in ('draft', 'cancelled'))
+  with check (auth.uid() = seller_id and status in ('draft', 'deleted'));
 
 -- ============ ENCHERES ============
 create table public.bids (
@@ -451,7 +460,6 @@ security definer
 as $$
 declare
   v_lot public.lots%rowtype;
-  v_duration interval;
   v_sale public.sales%rowtype;
 begin
   select * into v_lot from public.lots where id = p_lot_id for update;
@@ -472,21 +480,21 @@ begin
   end if;
 
   -- Une vente en attente ou annulée n'a plus lieu d'être : on la retire pour libérer le lot
-  -- pour un nouveau cycle (la contrainte unique sur sales.lot_id l'exigerait sinon)
+  -- pour un nouveau cycle (la contrainte unique sur sales.lot_id l'exigerait sinon).
   delete from public.sales where lot_id = p_lot_id and status <> 'confirmed';
+  -- Le round précédent n'a pas atteint la réserve : ses enchères n'ont plus de valeur contractuelle
+  -- (personne n'a rien remporté) — on les efface pour ne pas laisser un historique/"ta mise" trompeur.
+  delete from public.bids where lot_id = p_lot_id;
 
-  v_duration := v_lot.ends_at - v_lot.starts_at;
-  if v_duration <= interval '0' then
-    v_duration := interval '7 days'; -- filet de sécurité si la durée d'origine est incohérente
-  end if;
-
+  -- Durée fixe (7 jours) plutôt que dérivée de l'ancien round : évite qu'une fenêtre anormalement
+  -- courte (test, bug, anti-sniping jamais déclenché) se reproduise indéfiniment à chaque relist.
   update public.lots
   set status = 'live',
       current_price = starting_price,
       leading_bidder_id = null,
       leading_max_amount = null,
       starts_at = now(),
-      ends_at = now() + v_duration
+      ends_at = now() + interval '7 days'
   where id = p_lot_id
   returning * into v_lot;
 
@@ -656,3 +664,565 @@ create policy "un user supprime ses propres médias" on storage.objects
 -- ============ REALTIME ============
 alter publication supabase_realtime add table public.bids;
 alter publication supabase_realtime add table public.lots;
+
+-- ============================================================
+-- Tout ce qui suit a été appliqué directement via l'éditeur SQL Supabase, en plusieurs fois,
+-- sans jamais être reporté ici avant cette réconciliation. Reconstitué à l'identique de l'état
+-- réellement en ligne — voir le README pour le contexte de chaque bloc.
+-- ============================================================
+
+-- ============ CATALOGUE : catégories additionnelles (marché régional) ============
+insert into public.categories (slug, label, flag_code) values
+  ('catamaran', 'Catamaran', 'C'),
+  ('jetski', 'Jet-ski', 'J'),
+  ('peche-travail', 'Pêche & travail', 'T'),
+  ('habitable', 'Péniche & habitable', 'H'),
+  ('remorque', 'Remorque', 'R')
+on conflict (slug) do nothing;
+
+-- ============ CHECKLIST DE TRANSPARENCE + EXPERTISE OBLIGATOIRE (>= 5000€) ============
+alter table public.lots add column if not exists checklist jsonb default '{}'::jsonb;
+alter table public.lots add column if not exists expertise_report_url text;
+alter table public.lots add column if not exists expertise_status text check (expertise_status in ('pending', 'approved', 'rejected'));
+alter table public.lots add column if not exists expertise_moderation_note text;
+alter table public.lots add column if not exists expertise_submitted_at timestamptz;
+
+create or replace function public.lot_requires_expertise(p_lot_id uuid)
+returns boolean
+language sql
+stable
+as $$
+  select coalesce((select starting_price >= 5000 from public.lots where id = p_lot_id), false);
+$$;
+
+create or replace function public.lot_has_approved_expertise(p_lot_id uuid)
+returns boolean
+language sql
+stable
+as $$
+  select coalesce((select expertise_status = 'approved' from public.lots where id = p_lot_id), false);
+$$;
+
+-- ============ FRAIS ACHETEUR : calcul par tranche (marginal, comme l'impôt), 8-18% ============
+-- Ex. un lot adjugé à 150 000€ paie 18% sur les premiers 25 000€, 12% sur 25 000-100 000€,
+-- 8% au-delà — pas un taux unique appliqué à tout le montant dès qu'un palier est atteint.
+create or replace function public.buyer_fee_ht(p_hammer_price numeric)
+returns numeric
+language sql
+immutable
+as $$
+  select
+    least(p_hammer_price, 25000) * 0.18
+    + greatest(least(p_hammer_price, 100000) - 25000, 0) * 0.12
+    + greatest(p_hammer_price - 100000, 0) * 0.08;
+$$;
+
+-- ============ NOTIFICATIONS (email via Resend + push web) ============
+create table public.notifications (
+  id uuid primary key default uuid_generate_v4(),
+  user_id uuid references public.profiles(id) not null,
+  type text not null,
+  title text not null,
+  body text not null,
+  link text,
+  read_at timestamptz,
+  created_at timestamptz default now()
+);
+create index on public.notifications (user_id, created_at desc);
+create index on public.notifications (user_id, read_at) where read_at is null;
+alter table public.notifications enable row level security;
+create policy "un user voit ses notifications" on public.notifications
+  for select using (auth.uid() = user_id);
+create policy "un user marque ses notifications comme lues" on public.notifications
+  for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+create table public.notification_preferences (
+  user_id uuid primary key references public.profiles(id) on delete cascade,
+  email_enabled boolean not null default true,
+  push_enabled boolean not null default true
+);
+alter table public.notification_preferences enable row level security;
+create policy "un user gère ses préférences" on public.notification_preferences
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+create table public.push_subscriptions (
+  id uuid primary key default uuid_generate_v4(),
+  user_id uuid references public.profiles(id) on delete cascade not null,
+  endpoint text not null unique,
+  p256dh text not null,
+  auth_key text not null,
+  created_at timestamptz default now()
+);
+alter table public.push_subscriptions enable row level security;
+create policy "un user gère ses abonnements push" on public.push_subscriptions
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+create or replace function public.notify_event(p_user_id uuid, p_type text, p_title text, p_body text, p_link text default null)
+returns void
+language plpgsql
+security definer
+as $$
+begin
+  if p_user_id is null then return; end if;
+  insert into public.notifications (user_id, type, title, body, link)
+  values (p_user_id, p_type, p_title, p_body, p_link);
+end;
+$$;
+
+-- ============ SALES : date butoir de paiement + statut d'attente d'expertise ============
+alter table public.sales add column if not exists confirmed_at timestamptz;
+alter table public.sales drop constraint if exists sales_status_check;
+alter table public.sales add constraint sales_status_check
+  check (status in ('pending', 'awaiting_expertise', 'confirmed', 'cancelled'));
+
+-- ============ PLACE_BID : version finale (+ notifications dépassé / nouvelle enchère) ============
+create or replace function public.place_bid(p_lot_id uuid, p_amount numeric, p_commitment boolean, p_is_auto boolean default false)
+returns public.lots
+language plpgsql
+security definer
+as $$
+declare
+  v_lot public.lots%rowtype;
+  v_category_slug text;
+  v_new_visible_price numeric;
+  v_previous_leader uuid;
+begin
+  select * into v_lot from public.lots where id = p_lot_id for update;
+  v_previous_leader := v_lot.leading_bidder_id;
+
+  if v_lot.status <> 'live' then
+    raise exception 'Ce lot n''est pas ouvert aux enchères.';
+  end if;
+
+  if now() > v_lot.ends_at then
+    raise exception 'Cette enchère est terminée.';
+  end if;
+
+  if v_lot.seller_id = auth.uid() then
+    raise exception 'Tu ne peux pas enchérir sur ton propre lot.';
+  end if;
+
+  if not p_commitment then
+    raise exception 'Tu dois confirmer ton engagement à payer avant d''enchérir.';
+  end if;
+
+  if not coalesce(public.profile_is_complete(auth.uid()), false) then
+    raise exception 'Complète ton profil (nom, pseudo, téléphone, ville) dans "Mon compte" avant de pouvoir enchérir.';
+  end if;
+
+  if exists (select 1 from public.profiles where id = auth.uid() and buyer_strikes >= 3) then
+    raise exception 'Tes enchères sont temporairement bloquées suite à des désistements répétés après une vente acceptée. Contacte le support pour lever ce blocage.';
+  end if;
+
+  if p_amount < v_lot.current_price + v_lot.bid_increment then
+    raise exception 'Ton montant doit être d''au moins % €', v_lot.current_price + v_lot.bid_increment;
+  end if;
+
+  if v_lot.leading_bidder_id = auth.uid() then
+    raise exception 'Tu es déjà le meilleur enchérisseur sur ce lot. Attends qu''un autre acheteur enchérisse avant de remonter.';
+  end if;
+
+  select slug into v_category_slug from public.categories where id = v_lot.category_id;
+
+  if v_category_slug <> 'equipement' and exists (
+    select 1
+    from public.lots l2
+    join public.categories c2 on c2.id = l2.category_id
+    where l2.status = 'live'
+      and l2.ends_at > now()
+      and l2.id <> p_lot_id
+      and c2.slug <> 'equipement'
+      and l2.leading_bidder_id = auth.uid()
+  ) then
+    raise exception 'Tu es déjà en tête sur un autre bateau. Une seule enchère "bateau" active à la fois — termine ou fais-toi dépasser sur celle-ci avant d''en démarrer une autre.';
+  end if;
+
+  if p_is_auto then
+    if v_lot.leading_bidder_id is null then
+      v_new_visible_price := v_lot.current_price;
+    elsif p_amount > v_lot.leading_max_amount then
+      v_new_visible_price := least(p_amount, v_lot.leading_max_amount + v_lot.bid_increment);
+    else
+      v_new_visible_price := least(v_lot.leading_max_amount, p_amount + v_lot.bid_increment);
+    end if;
+
+    insert into public.bids (lot_id, bidder_id, amount, is_auto_bid, max_auto_amount, commitment_confirmed_at)
+    values (p_lot_id, auth.uid(), least(p_amount, v_new_visible_price), false, p_amount, now());
+
+    if v_lot.leading_bidder_id is not null and v_lot.leading_max_amount >= p_amount then
+      insert into public.bids (lot_id, bidder_id, amount, is_auto_bid, max_auto_amount)
+      values (p_lot_id, v_lot.leading_bidder_id, v_new_visible_price, true, v_lot.leading_max_amount);
+
+      update public.lots
+      set current_price = v_new_visible_price,
+          ends_at = case when ends_at - now() < interval '3 minutes' then now() + interval '3 minutes' else ends_at end
+      where id = p_lot_id
+      returning * into v_lot;
+    else
+      update public.lots
+      set current_price = v_new_visible_price,
+          leading_bidder_id = auth.uid(),
+          leading_max_amount = p_amount,
+          ends_at = case when ends_at - now() < interval '3 minutes' then now() + interval '3 minutes' else ends_at end
+      where id = p_lot_id
+      returning * into v_lot;
+    end if;
+
+  else
+    v_new_visible_price := p_amount;
+
+    insert into public.bids (lot_id, bidder_id, amount, is_auto_bid, max_auto_amount, commitment_confirmed_at)
+    values (p_lot_id, auth.uid(), p_amount, false, p_amount, now());
+
+    if v_lot.leading_bidder_id is not null and v_lot.leading_max_amount > p_amount then
+      v_new_visible_price := least(v_lot.leading_max_amount, p_amount + v_lot.bid_increment);
+
+      insert into public.bids (lot_id, bidder_id, amount, is_auto_bid, max_auto_amount)
+      values (p_lot_id, v_lot.leading_bidder_id, v_new_visible_price, true, v_lot.leading_max_amount);
+
+      update public.lots
+      set current_price = v_new_visible_price,
+          ends_at = case when ends_at - now() < interval '3 minutes' then now() + interval '3 minutes' else ends_at end
+      where id = p_lot_id
+      returning * into v_lot;
+    else
+      update public.lots
+      set current_price = v_new_visible_price,
+          leading_bidder_id = auth.uid(),
+          leading_max_amount = p_amount,
+          ends_at = case when ends_at - now() < interval '3 minutes' then now() + interval '3 minutes' else ends_at end
+      where id = p_lot_id
+      returning * into v_lot;
+    end if;
+  end if;
+
+  if v_previous_leader is not null and v_lot.leading_bidder_id is not null and v_lot.leading_bidder_id <> v_previous_leader then
+    perform public.notify_event(
+      v_previous_leader, 'outbid',
+      'Tu as été dépassé', v_lot.title || ' — nouvelle enchère : ' || v_lot.current_price || ' €',
+      'lot.html?id=' || v_lot.id
+    );
+  end if;
+
+  if v_lot.leading_bidder_id is not null and v_lot.leading_bidder_id is distinct from v_previous_leader then
+    perform public.notify_event(
+      v_lot.seller_id, 'new_bid',
+      'Nouvelle enchère sur ton lot', v_lot.title || ' — ' || v_lot.current_price || ' €',
+      'lot.html?id=' || v_lot.id
+    );
+  end if;
+
+  return v_lot;
+end;
+$$;
+
+-- ============ CLÔTURE : version finale (frais marginaux + notifications) ============
+create or replace function public.close_expired_auctions()
+returns void
+language plpgsql
+security definer
+as $$
+declare
+  r record;
+  v_new_status text;
+begin
+  for r in select * from public.lots where status = 'live' and ends_at <= now() loop
+    v_new_status := case when r.current_price >= r.reserve_price then 'sold' else 'unsold' end;
+
+    update public.lots set status = v_new_status where id = r.id;
+
+    if r.leading_bidder_id is not null then
+      insert into public.sales (lot_id, seller_id, buyer_id, hammer_price, buyer_total_price)
+      values (
+        r.id, r.seller_id, r.leading_bidder_id, r.current_price,
+        round(r.current_price + (public.buyer_fee_ht(r.current_price) * 1.21), 2)
+      )
+      on conflict (lot_id) do nothing;
+    end if;
+
+    if v_new_status = 'sold' then
+      perform public.notify_event(r.leading_bidder_id, 'auction_won', 'Tu as remporté ce lot !', r.title || ' — ' || r.current_price || ' €', 'compte.html#achats');
+      perform public.notify_event(r.seller_id, 'lot_sold', 'Ton lot est vendu', r.title || ' — ' || r.current_price || ' €', 'compte.html#activite');
+    else
+      perform public.notify_event(r.seller_id, 'lot_unsold', 'Ton lot n''a pas trouvé preneur', r.title || ' — réserve non atteinte', 'compte.html#activite');
+    end if;
+  end loop;
+end;
+$$;
+
+-- ============ VENTE : accord vendeur/acheteur, gating expertise, date butoir de paiement ============
+create or replace function public.seller_respond_to_sale(p_sale_id uuid, p_accept boolean)
+returns public.sales
+language plpgsql
+security definer
+as $$
+declare v_sale public.sales%rowtype; v_title text; v_needs_expertise boolean; v_has_report boolean;
+begin
+  select * into v_sale from public.sales where id = p_sale_id for update;
+  if v_sale.id is null then
+    raise exception 'Vente introuvable.';
+  end if;
+  if v_sale.seller_id <> auth.uid() then
+    raise exception 'Tu n''es pas le vendeur de ce lot.';
+  end if;
+
+  v_needs_expertise := public.lot_requires_expertise(v_sale.lot_id);
+  v_has_report := public.lot_has_approved_expertise(v_sale.lot_id);
+
+  update public.sales
+  set seller_accepted = p_accept,
+      seller_decision_at = now(),
+      status = case
+        when p_accept = false then 'cancelled'
+        when p_accept = true and v_sale.buyer_confirmed = true then
+          case when v_needs_expertise and not v_has_report then 'awaiting_expertise' else 'confirmed' end
+        else status
+      end,
+      confirmed_at = case
+        when p_accept = true and v_sale.buyer_confirmed = true and not (v_needs_expertise and not v_has_report) then now()
+        else confirmed_at
+      end
+  where id = p_sale_id
+  returning * into v_sale;
+
+  select title into v_title from public.lots where id = v_sale.lot_id;
+
+  if p_accept then
+    perform public.notify_event(v_sale.buyer_id, 'sale_accepted', 'Le vendeur a accepté la vente', v_title, 'compte.html#achats');
+  end if;
+  if v_sale.status = 'confirmed' then
+    perform public.notify_event(v_sale.buyer_id, 'sale_confirmed', 'Coordonnées disponibles', v_title, 'compte.html#achats');
+    perform public.notify_event(v_sale.seller_id, 'sale_confirmed', 'Coordonnées disponibles', v_title, 'compte.html#activite');
+  elsif v_sale.status = 'awaiting_expertise' then
+    perform public.notify_event(v_sale.seller_id, 'expertise_needed', 'Rapport d''expertise requis', v_title || ' — fournis (ou fais valider) le rapport pour débloquer la vente', 'compte.html#activite');
+  end if;
+
+  return v_sale;
+end;
+$$;
+
+create or replace function public.buyer_confirm_sale(p_sale_id uuid, p_confirm boolean)
+returns public.sales
+language plpgsql
+security definer
+as $$
+declare v_sale public.sales%rowtype; v_title text; v_needs_expertise boolean; v_has_report boolean;
+begin
+  select * into v_sale from public.sales where id = p_sale_id for update;
+  if v_sale.id is null then
+    raise exception 'Vente introuvable.';
+  end if;
+  if v_sale.buyer_id <> auth.uid() then
+    raise exception 'Tu n''es pas l''acheteur de ce lot.';
+  end if;
+
+  v_needs_expertise := public.lot_requires_expertise(v_sale.lot_id);
+  v_has_report := public.lot_has_approved_expertise(v_sale.lot_id);
+
+  update public.sales
+  set buyer_confirmed = p_confirm,
+      buyer_decision_at = now(),
+      status = case
+        when p_confirm = false then 'cancelled'
+        when p_confirm = true and v_sale.seller_accepted = true then
+          case when v_needs_expertise and not v_has_report then 'awaiting_expertise' else 'confirmed' end
+        else status
+      end,
+      confirmed_at = case
+        when p_confirm = true and v_sale.seller_accepted = true and not (v_needs_expertise and not v_has_report) then now()
+        else confirmed_at
+      end
+  where id = p_sale_id
+  returning * into v_sale;
+
+  select title into v_title from public.lots where id = v_sale.lot_id;
+
+  if v_sale.status = 'confirmed' then
+    perform public.notify_event(v_sale.buyer_id, 'sale_confirmed', 'Coordonnées disponibles', v_title, 'compte.html#achats');
+    perform public.notify_event(v_sale.seller_id, 'sale_confirmed', 'Coordonnées disponibles', v_title, 'compte.html#activite');
+  elsif v_sale.status = 'awaiting_expertise' then
+    perform public.notify_event(v_sale.seller_id, 'expertise_needed', 'Rapport d''expertise requis', v_title || ' — fournis (ou fais valider) le rapport pour débloquer la vente', 'compte.html#activite');
+  end if;
+
+  return v_sale;
+end;
+$$;
+
+-- ============ EXPERTISE : upload vendeur + validation/refus admin ============
+create or replace function public.seller_upload_expertise(p_lot_id uuid, p_url text)
+returns void
+language plpgsql
+security definer
+as $$
+declare v_admin record; v_title text;
+begin
+  if not exists (select 1 from public.lots where id = p_lot_id and seller_id = auth.uid()) then
+    raise exception 'Tu n''es pas le vendeur de ce lot.';
+  end if;
+
+  update public.lots
+  set expertise_report_url = p_url, expertise_status = 'pending', expertise_moderation_note = null,
+      expertise_submitted_at = now()
+  where id = p_lot_id;
+
+  select title into v_title from public.lots where id = p_lot_id;
+  for v_admin in select id from public.profiles where is_admin loop
+    perform public.notify_event(v_admin.id, 'expertise_uploaded', 'Rapport d''expertise à valider', v_title, 'admin.html');
+  end loop;
+end;
+$$;
+
+create or replace function public.admin_approve_expertise(p_lot_id uuid)
+returns void
+language plpgsql
+security definer
+as $$
+declare v_sale public.sales%rowtype; v_title text;
+begin
+  if not public.current_user_is_admin() then
+    raise exception 'Réservé aux administrateurs.';
+  end if;
+
+  update public.lots set expertise_status = 'approved', expertise_moderation_note = null where id = p_lot_id;
+  select title into v_title from public.lots where id = p_lot_id;
+
+  select * into v_sale from public.sales where lot_id = p_lot_id and status = 'awaiting_expertise' for update;
+  if v_sale.id is not null then
+    update public.sales set status = 'confirmed', confirmed_at = now() where id = v_sale.id;
+    perform public.notify_event(v_sale.buyer_id, 'sale_confirmed', 'Coordonnées disponibles', v_title, 'compte.html#achats');
+    perform public.notify_event(v_sale.seller_id, 'sale_confirmed', 'Coordonnées disponibles', v_title, 'compte.html#activite');
+  else
+    perform public.notify_event(
+      (select seller_id from public.lots where id = p_lot_id),
+      'expertise_approved', 'Rapport d''expertise validé', v_title, 'lot.html?id=' || p_lot_id
+    );
+  end if;
+end;
+$$;
+
+create or replace function public.admin_reject_expertise(p_lot_id uuid, p_note text)
+returns void
+language plpgsql
+security definer
+as $$
+declare v_title text;
+begin
+  if not public.current_user_is_admin() then
+    raise exception 'Réservé aux administrateurs.';
+  end if;
+
+  update public.lots set expertise_status = 'rejected', expertise_moderation_note = p_note where id = p_lot_id;
+  select title into v_title from public.lots where id = p_lot_id;
+  perform public.notify_event(
+    (select seller_id from public.lots where id = p_lot_id),
+    'expertise_rejected', 'Rapport d''expertise refusé', v_title || ' — ' || p_note, 'compte.html#activite'
+  );
+end;
+$$;
+
+grant execute on function public.seller_upload_expertise(uuid, text) to authenticated;
+grant execute on function public.admin_approve_expertise(uuid) to authenticated;
+grant execute on function public.admin_reject_expertise(uuid, text) to authenticated;
+grant execute on function public.lot_has_approved_expertise(uuid) to authenticated;
+grant execute on function public.lot_requires_expertise(uuid) to authenticated;
+
+-- ============ MODÉRATION : notification vendeur sur approbation/refus d'un lot ============
+create or replace function public.handle_lot_moderation_notify()
+returns trigger
+language plpgsql
+security definer
+as $$
+begin
+  if new.status = 'live' and old.status in ('draft', 'scheduled') then
+    perform public.notify_event(new.seller_id, 'lot_approved', 'Ton lot est en ligne', new.title, 'lot.html?id=' || new.id);
+  elsif new.status = 'cancelled' and old.status <> 'cancelled' then
+    perform public.notify_event(new.seller_id, 'lot_rejected', 'Ton lot a été refusé', new.title || coalesce(' — ' || new.moderation_note, ''), 'compte.html#activite');
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists on_lot_moderation_notify on public.lots;
+create trigger on_lot_moderation_notify
+  after update on public.lots
+  for each row execute procedure public.handle_lot_moderation_notify();
+
+-- ============ VUE lots_with_buyer_price : version finale (frais marginaux, colonnes à jour) ============
+-- ATTENTION : "l.*" fige la liste des colonnes AU MOMENT de la création de la vue — à recréer
+-- (drop + create, jamais un simple "create or replace") à chaque colonne ajoutée à "lots" après coup.
+drop view if exists public.lots_with_buyer_price;
+create view public.lots_with_buyer_price as
+select
+  l.*,
+  round(public.buyer_fee_ht(l.current_price), 2) as buyer_fee_ht,
+  round(public.buyer_fee_ht(l.current_price) * 0.21, 2) as buyer_fee_vat,
+  round(l.current_price + (public.buyer_fee_ht(l.current_price) * 1.21), 2) as buyer_total_price
+from public.lots l;
+
+-- ============ RAPPELS AUTOMATIQUES : date butoir de paiement (7j après confirmation) ============
+create or replace function public.check_payment_deadlines()
+returns void
+language plpgsql
+security definer
+as $$
+declare r record; v_deadline timestamptz;
+begin
+  for r in select * from public.sales where status = 'confirmed' and confirmed_at is not null loop
+    v_deadline := r.confirmed_at + interval '7 days';
+
+    if v_deadline > now() and v_deadline <= now() + interval '2 days'
+       and not exists (select 1 from public.notifications where user_id = r.buyer_id and type = 'payment_deadline_soon' and created_at > r.confirmed_at) then
+      perform public.notify_event(r.buyer_id, 'payment_deadline_soon', 'Paiement à finaliser bientôt', 'Il te reste moins de 2 jours pour régler ton achat.', 'compte.html#achats');
+    end if;
+
+    if v_deadline <= now()
+       and not exists (select 1 from public.notifications where user_id = r.buyer_id and type = 'payment_overdue' and created_at > r.confirmed_at) then
+      perform public.notify_event(r.buyer_id, 'payment_overdue', 'Paiement en retard', 'La date limite de paiement de ton achat est dépassée.', 'compte.html#achats');
+      perform public.notify_event(r.seller_id, 'payment_overdue', 'Paiement en retard côté acheteur', 'La date limite de paiement de ta vente est dépassée — contacte l''acheteur si besoin.', 'compte.html#activite');
+    end if;
+  end loop;
+end;
+$$;
+
+select cron.schedule('check-payment-deadlines', '0 8 * * *', 'select public.check_payment_deadlines();');
+
+-- ============ RGPD : purge des comptes inactifs depuis 2 ans (recommandation CNIL) ============
+create or replace function public.warn_and_purge_inactive_accounts()
+returns void
+language plpgsql
+security definer
+as $$
+declare v_user record;
+begin
+  for v_user in
+    select p.id, p.full_name
+    from public.profiles p
+    join auth.users u on u.id = p.id
+    where coalesce(u.last_sign_in_at, u.created_at) < now() - interval '23 months'
+      and not exists (
+        select 1 from public.notifications n
+        where n.user_id = p.id and n.type = 'account_purge_warning'
+          and n.created_at > now() - interval '2 months'
+      )
+  loop
+    perform public.notify_event(
+      v_user.id, 'account_purge_warning',
+      'Ton compte Kriee sera bientôt supprimé pour inactivité',
+      'Aucune connexion depuis presque 2 ans. Sans connexion dans les 30 prochains jours, ton compte et tes données personnelles seront supprimés, conformément à notre politique de confidentialité.',
+      'connexion.html'
+    );
+  end loop;
+
+  update public.profiles
+  set full_name = null, phone = null, pseudo = 'compte-supprime-' || substr(id::text, 1, 8), city = null
+  where id in (
+    select p.id
+    from public.profiles p
+    join auth.users u on u.id = p.id
+    where coalesce(u.last_sign_in_at, u.created_at) < now() - interval '24 months'
+      and p.full_name is not null
+  );
+end;
+$$;
+
+select cron.schedule('warn-and-purge-inactive-accounts', '0 4 * * *', 'select public.warn_and_purge_inactive_accounts();');
