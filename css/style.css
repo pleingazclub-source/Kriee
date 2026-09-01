@@ -657,6 +657,20 @@ a { color: inherit; }
   .lots-grid { grid-template-columns: 1fr; }
 
   .field-row { flex-direction: column; gap: 0; }
-  .admin-table, .account-table { display: block; overflow-x: auto; white-space: nowrap; }
+  .admin-table { display: block; overflow-x: auto; white-space: nowrap; }
   .account-table .moderation-note { white-space: normal; }
+
+  /* Colonnes secondaires masquées sur mobile plutôt qu'un scroll horizontal — rien n'est perdu,
+     juste consultable en ouvrant la fiche du lot. Priorité gardée : lot, statut, prix, clôture. */
+  #my-favorites-table th:nth-child(5), #my-favorites-table td:nth-child(5),
+  #my-favorites-table th:nth-child(6), #my-favorites-table td:nth-child(6),
+  #my-bids-table th:nth-child(3), #my-bids-table td:nth-child(3),
+  #my-bids-table th:nth-child(4), #my-bids-table td:nth-child(4),
+  #my-bids-table th:nth-child(8), #my-bids-table td:nth-child(8),
+  #my-lots-table th:nth-child(3), #my-lots-table td:nth-child(3),
+  #my-lots-table th:nth-child(4), #my-lots-table td:nth-child(4),
+  #my-lots-table th:nth-child(5), #my-lots-table td:nth-child(5),
+  #my-lots-table th:nth-child(9), #my-lots-table td:nth-child(9) {
+    display: none;
+  }
 }
