@@ -84,8 +84,9 @@ a { color: inherit; }
   border-bottom: 1px solid #E4DFD3;
   background: var(--foam);
 }
-.site-header__actions { display: flex; align-items: center; margin-left: auto; }
+.site-header__actions { display: flex; align-items: center; order: 3; margin-left: auto; }
 .brand {
+  order: 1;
   font-family: var(--font-display);
   font-size: 1.4rem;
   font-weight: 600;
@@ -104,7 +105,7 @@ a { color: inherit; }
   font-weight: 500;
   letter-spacing: 0.08em;
 }
-.site-nav { display: flex; gap: 1.8rem; align-items: center; }
+.site-nav { display: flex; gap: 1.8rem; align-items: center; order: 2; }
 .site-nav a:not(.btn) {
   text-decoration: none;
   font-size: 0.92rem;
@@ -627,7 +628,13 @@ a { color: inherit; }
     align-items: center;
     gap: 0.9rem 1.2rem;
     font-size: 0.86rem;
+    /* Sur desktop, le nav se place entre le logo et le menu utilisateur (order 2, avant actions).
+       Sur mobile, il doit au contraire passer APRÈS et EN DESSOUS, pour laisser le logo et le
+       menu utilisateur groupés ensemble sur la première ligne, comme convenu précédemment. */
+    order: 3;
+    flex-basis: 100%;
   }
+  .site-header__actions { order: 2; }
   /* La recherche passe sur sa propre ligne pleine largeur plutôt que de se battre pour la place
      avec les liens. */
   #header-search-form { flex-basis: 100%; }
