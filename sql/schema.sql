@@ -1151,7 +1151,9 @@ create trigger on_lot_moderation_notify
 -- ATTENTION : "l.*" fige la liste des colonnes AU MOMENT de la création de la vue — à recréer
 -- (drop + create, jamais un simple "create or replace") à chaque colonne ajoutée à "lots" après coup.
 drop view if exists public.lots_with_buyer_price;
-create view public.lots_with_buyer_price as
+create view public.lots_with_buyer_price
+with (security_invoker = on)
+as
 select
   l.*,
   round(public.buyer_fee_ht(l.current_price), 2) as buyer_fee_ht,
