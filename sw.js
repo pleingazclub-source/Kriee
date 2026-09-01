@@ -8,9 +8,18 @@ self.addEventListener('push', (event) => {
   const title = data.title || 'Kriee';
   const options = {
     body: data.body || '',
-    icon: 'img/logo-mark.png',
-    badge: 'img/logo-mark.png',
+    icon: 'img/icon-192.png',
+    badge: 'img/icon-192.png',
+    image: data.image || undefined, // photo du lot, quand disponible — bien plus reconnaissable qu'un simple texte
+    vibrate: [120, 60, 120],
+    // Regroupe les notifications d'un même type sur un même lot (ex. plusieurs "nouvelle
+    // enchère" sur le même bateau) au lieu d'empiler indéfiniment — mais garde séparées les
+    // notifications de types différents sur ce même lot (ex. "dépassé" reste visible à côté
+    // de "nouvelle enchère").
+    tag: data.type && data.link ? `${data.type}:${data.link}` : undefined,
+    renotify: true,
     data: { link: data.link || '/' },
+    actions: data.link ? [{ action: 'open', title: 'Voir sur Kriee' }] : [],
   };
   event.waitUntil(self.registration.showNotification(title, options));
 });
