@@ -342,11 +342,23 @@
         <label>Checklist de transparence</label>
         <p class="hint" style="margin:0 0 0.6rem;">Déclaration du vendeur — pas une vérification indépendante. Coche ce qui est vérifié et en bon état ; laisse décoché sinon (précise dans la description si besoin).</p>
         <div style="display:flex; flex-direction:column; gap:0.5rem;">
-          <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400;"><input type="checkbox" class="checklist-item" data-key="coque"> Coque inspectée, pas de voie d'eau connue</label>
-          <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400;"><input type="checkbox" class="checklist-item" data-key="moteur"> Moteur démarre et fonctionne normalement</label>
-          <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400;"><input type="checkbox" class="checklist-item" data-key="electricite"> Circuit électrique fonctionnel, pas de court-circuit connu</label>
-          <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400;"><input type="checkbox" class="checklist-item" data-key="securite"> Équipements de sécurité obligatoires à bord et à jour</label>
-          <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400;"><input type="checkbox" class="checklist-item" data-key="papiers"> Papiers administratifs (francisation/immatriculation) à jour</label>
+          <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400;"><input type="checkbox" class="checklist-item checklist-item--boat" data-key="coque"> Coque inspectée, pas de voie d'eau connue</label>
+          <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400;"><input type="checkbox" class="checklist-item checklist-item--boat" data-key="moteur"> Moteur démarre et fonctionne normalement</label>
+          <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400;"><input type="checkbox" class="checklist-item checklist-item--boat" data-key="electricite"> Circuit électrique fonctionnel, pas de court-circuit connu</label>
+          <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400;"><input type="checkbox" class="checklist-item checklist-item--boat" data-key="securite"> Équipements de sécurité obligatoires à bord et à jour</label>
+          <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400;"><input type="checkbox" class="checklist-item checklist-item--boat" data-key="papiers"> Papiers administratifs (francisation/immatriculation) à jour</label>
+        </div>
+      </div>
+
+      <div class="field" id="checklist-remorque-only" style="display:none;">
+        <label>Checklist de transparence</label>
+        <p class="hint" style="margin:0 0 0.6rem;">Déclaration du vendeur — pas une vérification indépendante. Coche ce qui est vérifié et en bon état ; laisse décoché sinon (précise dans la description si besoin).</p>
+        <div style="display:flex; flex-direction:column; gap:0.5rem;">
+          <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400;"><input type="checkbox" class="checklist-item checklist-item--remorque" data-key="freins"> Freins fonctionnels</label>
+          <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400;"><input type="checkbox" class="checklist-item checklist-item--remorque" data-key="corrosion"> Pas de corrosion structurelle visible</label>
+          <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400;"><input type="checkbox" class="checklist-item checklist-item--remorque" data-key="eclairage"> Feux et clignotants fonctionnels</label>
+          <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400;"><input type="checkbox" class="checklist-item checklist-item--remorque" data-key="pneus"> Pneus en bon état</label>
+          <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400;"><input type="checkbox" class="checklist-item checklist-item--remorque" data-key="papiers"> Papiers administratifs (carte grise/immatriculation) à jour</label>
         </div>
       </div>
 
@@ -489,8 +501,10 @@ document.getElementById('category').addEventListener('change', () => { stepIndex
 function syncRequiredFields() {
   const slug = document.getElementById('category').value;
   const isEquip = slug === 'equipement';
+  const isRemorque = slug === 'remorque';
   document.getElementById('e-type').required = isEquip;
-  document.getElementById('checklist-boat-only').style.display = isEquip ? 'none' : 'block';
+  document.getElementById('checklist-boat-only').style.display = (!isEquip && !isRemorque) ? 'block' : 'none';
+  document.getElementById('checklist-remorque-only').style.display = isRemorque ? 'block' : 'none';
   // Le gréement n'a de sens que pour un voilier ou un catamaran — inutile de le montrer pour
   // un bateau à moteur, un semi-rigide, un jet-ski, etc.
   const greementSection = document.getElementById('greement-section');
@@ -727,10 +741,6 @@ async function initEditMode() {
   }
 
   existingLotData = { images: lot.images || [], video_url: lot.video_url, expertise_report_url: lot.expertise_report_url };
-  Object.entries(lot.checklist || {}).forEach(([key, checked]) => {
-    const cb = document.querySelector(`.checklist-item[data-key="${key}"]`);
-    if (cb) cb.checked = checked;
-  });
 
   document.getElementById('page-title').textContent = 'Corriger et resoumettre ton lot';
   document.getElementById('submit-btn').textContent = 'Resoumettre le lot pour modération';
@@ -752,6 +762,14 @@ async function initEditMode() {
   const isRemorque = categorySlug === 'remorque';
   const isJetski = categorySlug === 'jetski';
   const g = lot.specs?.general || {};
+
+  // Scopé par catégorie (boat vs remorque partagent la clé "papiers") — sinon le préremplissage
+  // pourrait cocher la mauvaise checklist.
+  const checklistSelector = isRemorque ? '.checklist-item--remorque' : '.checklist-item--boat';
+  Object.entries(lot.checklist || {}).forEach(([key, checked]) => {
+    const cb = document.querySelector(`${checklistSelector}[data-key="${key}"]`);
+    if (cb) cb.checked = checked;
+  });
 
   if (isEquip) {
     document.getElementById('e-type').value = g["Type d'équipement"] || '';
@@ -1000,8 +1018,11 @@ document.getElementById('sell-form').addEventListener('submit', async (e) => {
     expertiseUrl = await uploadLotMedia(expertiseFile, session.user.id);
   }
 
+  // Ne lit que la checklist réellement affichée (boat ou remorque) — évite qu'un changement de
+  // catégorie en cours de saisie ne mélange des clés d'une checklist abandonnée dans les specs.
   const checklist = {};
-  document.querySelectorAll('.checklist-item').forEach(cb => { checklist[cb.dataset.key] = cb.checked; });
+  const checklistSelector = isRemorque ? '.checklist-item--remorque' : '.checklist-item--boat';
+  document.querySelectorAll(checklistSelector).forEach(cb => { checklist[cb.dataset.key] = cb.checked; });
 
   const payload = {
     category_id: cat.id,
