@@ -47,15 +47,6 @@
   .sale-card__contact { background: var(--chalk); border-radius: 3px; padding: 0.9rem 1.1rem; margin-top: 1rem; font-size: 0.9rem; }
   .sale-card__contact strong { display: block; margin-bottom: 0.3rem; }
   .sale-card__cancelled { color: var(--buoy); font-size: 0.85rem; margin-top: 0.6rem; }
-
-  @media (max-width: 640px) {
-    /* Sans photo, le bloc titre est assez étroit pour que le prix tienne à côté sur la même
-       ligne (le retour à la ligne du flex-wrap ne se déclenche que s'il manque de place) — d'où
-       l'incohérence entre les lots avec et sans photo. Empilement systématique ici, plutôt que
-       de dépendre de la largeur du contenu. */
-    .sale-card__top { flex-direction: column; align-items: flex-start; gap: 0.6rem; }
-    .sale-card__price { font-size: 1.15rem; }
-  }
   .gate { max-width: 480px; margin: 4rem auto; padding: 2rem; text-align: center; }
 </style>
 </head>
@@ -553,6 +544,7 @@ function renderMyLots() {
       <td>${l.cover_image_url ? `<img src="${l.cover_image_url}">` : ''}</td>
       <td>
         ${unreadDotHTML(l.id)}<strong>${l.title}</strong><br><span style="color:#5A6772; font-size:0.8rem;">${l.categories?.label || ''} — ${l.region}</span>
+        <br class="mobile-status-break"><span class="status-pill status-pill--${statusPillClass(l)} mobile-status-inline" style="font-family:var(--font-data); font-size:0.7rem; padding:0.2rem 0.55rem; border-radius:999px; background:#F1EEE6; color:#5A6772;">${l.status}</span>
         ${l.moderation_note ? `<div class="moderation-note ${l.status === 'deleted' ? 'moderation-note--deleted' : ''}">
           <strong>${l.status === 'deleted' ? 'Motif de suppression' : 'Motif de refus'} :</strong> ${l.moderation_note}
         </div>` : ''}
@@ -596,7 +588,15 @@ async function loadMyBids(userId) {
     if (seen.has(b.lot_id)) return false;
     seen.add(b.lot_id);
     return true;
-  });
+  })
+  // Une enchère remportée se retrouve déjà dans "Mes achats" — pas besoin de la garder ici aussi,
+  // ça ferait doublon.
+  .filter(b => !(b.lots && b.lots.status === 'sold' && b.lots.leading_bidder_id === userId));
+
+  if (myBestBids.length === 0) {
+    document.getElementById('my-bids-empty').style.display = 'block';
+    return;
+  }
 
   rows.innerHTML = myBestBids.map(b => {
     const lot = b.lots;
@@ -624,7 +624,7 @@ async function loadMyBids(userId) {
     return `
     <tr class="row-clickable" onclick="if(!event.target.closest('a,button,input,label')) location.href='lot.html?id=${lot.id}'">
       <td>${lot.cover_image_url ? `<img src="${lot.cover_image_url}">` : ''}</td>
-      <td>${unreadDotHTML(lot.id)}<strong>${lot.title}</strong><br><span style="color:#5A6772; font-size:0.8rem;">${lot.region}</span></td>
+      <td>${unreadDotHTML(lot.id)}<strong>${lot.title}</strong><br><span style="color:#5A6772; font-size:0.8rem;">${lot.region}</span><br class="mobile-status-break"><span class="bid-status ${statusClass} mobile-status-inline">${statusLabel}</span></td>
       <td>${formatEUR(b.amount)}</td>
       <td><strong>${formatEUR(b.max_auto_amount)}</strong></td>
       <td>${formatEUR(lot.current_price)}</td>
