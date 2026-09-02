@@ -220,6 +220,40 @@
       </div>
     </section>
 
+    <!-- ÉTAPE 2C : caractéristiques REMORQUE (masquée sinon) -->
+    <section class="spec-panel" data-step="2-remorque">
+      <p class="section-title">Caractéristiques de la remorque</p>
+      <p class="hint">Si tu ne sais pas, laisse vide — rien n'est obligatoire ici.</p>
+      <div class="field-row">
+        <div class="field"><label for="r-marque">Marque</label><input type="text" id="r-marque"></div>
+        <div class="field"><label for="r-annee">Année</label><input type="number" id="r-annee"></div>
+        <div class="field">
+          <label for="r-essieu">Type d'essieu</label>
+          <select id="r-essieu"><option value=""></option><option>Simple</option><option>Tandem</option></select>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label for="r-ptac">PTAC (kg)</label><input type="number" id="r-ptac"></div>
+        <div class="field"><label for="r-charge">Charge utile (kg)</label><input type="number" id="r-charge"></div>
+        <div class="field">
+          <label for="r-freinage">Freinage</label>
+          <select id="r-freinage"><option value=""></option><option>Oui</option><option>Non</option></select>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label for="r-longueur">Longueur (m)</label><input type="number" step="0.1" id="r-longueur"></div>
+        <div class="field"><label for="r-largeur">Largeur (m)</label><input type="number" step="0.1" id="r-largeur"></div>
+        <div class="field">
+          <label for="r-immat">Immatriculée</label>
+          <select id="r-immat"><option value=""></option><option>Oui</option><option>Non</option></select>
+        </div>
+      </div>
+      <div class="field">
+        <label for="r-etat">État général</label>
+        <select id="r-etat"><option value=""></option><option>Neuf</option><option>Très bon état</option><option>Bon état</option><option>État moyen</option><option>Pour pièces</option></select>
+      </div>
+    </section>
+
     <!-- ÉTAPE 3 : équipements à bord (bateaux uniquement) -->
     <section class="spec-panel" data-step="3-boat">
       <p class="section-title">Moteur & électricité</p>
@@ -246,21 +280,23 @@
         <label><input type="checkbox" value="Traceur de cartes"> Traceur de cartes</label>
       </div>
 
-      <p class="section-title">Gréement (voiliers)</p>
-      <div class="field-row">
-        <div class="field"><label for="g-mats">Nombre de mâts</label><input type="number" id="g-mats"></div>
-        <div class="field">
-          <label for="g-etat">État des voiles</label>
-          <select id="g-etat"><option value=""></option><option>Neuves</option><option>Bon</option><option>Moyen</option><option>À changer</option></select>
+      <div id="greement-section">
+        <p class="section-title">Gréement (voiliers)</p>
+        <div class="field-row">
+          <div class="field"><label for="g-mats">Nombre de mâts</label><input type="number" id="g-mats"></div>
+          <div class="field">
+            <label for="g-etat">État des voiles</label>
+            <select id="g-etat"><option value=""></option><option>Neuves</option><option>Bon</option><option>Moyen</option><option>À changer</option></select>
+          </div>
         </div>
-      </div>
-      <div class="check-grid" id="greement-checks">
-        <label><input type="checkbox" value="Grand-voile"> Grand-voile</label>
-        <label><input type="checkbox" value="Génois"> Génois</label>
-        <label><input type="checkbox" value="Foc"> Foc</label>
-        <label><input type="checkbox" value="Spi"> Spi</label>
-        <label><input type="checkbox" value="Gennaker"> Gennaker</label>
-        <label><input type="checkbox" value="Foc d'orage"> Foc d'orage</label>
+        <div class="check-grid" id="greement-checks">
+          <label><input type="checkbox" value="Grand-voile"> Grand-voile</label>
+          <label><input type="checkbox" value="Génois"> Génois</label>
+          <label><input type="checkbox" value="Foc"> Foc</label>
+          <label><input type="checkbox" value="Spi"> Spi</label>
+          <label><input type="checkbox" value="Gennaker"> Gennaker</label>
+          <label><input type="checkbox" value="Foc d'orage"> Foc d'orage</label>
+        </div>
       </div>
 
       <p class="section-title">Sécurité & équipement extérieur</p>
@@ -273,6 +309,24 @@
         <label><input type="checkbox" value="Taud"> Taud</label>
         <label><input type="checkbox" value="Défenses et cordages"> Défenses et cordages</label>
         <label><input type="checkbox" value="Annexe"> Annexe</label>
+      </div>
+    </section>
+
+    <!-- ÉTAPE 3B : équipements JET-SKI (bien plus léger qu'un bateau — pas de gréement,
+         pas d'électronique de navigation type GPS/AIS/radar qui n'a pas lieu d'être ici) -->
+    <section class="spec-panel" data-step="3-jetski">
+      <p class="section-title">Moteur</p>
+      <div class="field-row">
+        <div class="field"><label for="j-marque">Marque moteur</label><input type="text" id="j-marque"></div>
+        <div class="field"><label for="j-puissance">Puissance (ch)</label><input type="number" id="j-puissance"></div>
+        <div class="field"><label for="j-heures">Heures moteur</label><input type="number" id="j-heures"></div>
+      </div>
+      <p class="section-title">Équipement fourni</p>
+      <div class="check-grid" id="jetski-checks">
+        <label><input type="checkbox" value="Gilet de sauvetage"> Gilet de sauvetage</label>
+        <label><input type="checkbox" value="Coupe-circuit fonctionnel"> Coupe-circuit fonctionnel</label>
+        <label><input type="checkbox" value="Housse de protection"> Housse de protection</label>
+        <label><input type="checkbox" value="Remorque incluse"> Remorque incluse</label>
       </div>
     </section>
 
@@ -355,8 +409,11 @@
 <script>
 // ---------- Assistant multi-étapes, avec branche bateau / équipement ----------
 function currentSteps() {
-  const isEquip = document.getElementById('category').value === 'equipement';
-  return isEquip ? ['1a', '1b', '1c', '2-equip', '4', '5'] : ['1a', '1b', '1c', '2-boat', '3-boat', '4', '5'];
+  const slug = document.getElementById('category').value;
+  if (slug === 'equipement') return ['1a', '1b', '1c', '2-equip', '4', '5'];
+  if (slug === 'remorque') return ['1a', '1b', '1c', '2-remorque', '4', '5'];
+  if (slug === 'jetski') return ['1a', '1b', '1c', '2-boat', '3-jetski', '4', '5'];
+  return ['1a', '1b', '1c', '2-boat', '3-boat', '4', '5']; // voile, moteur, semi-rigide, catamaran, peche-travail, habitable
 }
 const STEP_LABELS = {
   '1a': 'Titre & catégorie',
@@ -364,7 +421,9 @@ const STEP_LABELS = {
   '1c': 'Prix & durée',
   '2-boat': 'Caractéristiques',
   '2-equip': 'Caractéristiques',
+  '2-remorque': 'Caractéristiques',
   '3-boat': 'Équipements à bord',
+  '3-jetski': 'Équipements',
   '4': 'Description & docs',
   '5': 'Récapitulatif',
 };
@@ -428,9 +487,14 @@ document.getElementById('wizard-prev').addEventListener('click', () => {
 document.getElementById('category').addEventListener('change', () => { stepIndex = 0; showStep(); syncRequiredFields(); syncDurationDefault(); });
 
 function syncRequiredFields() {
-  const isEquip = document.getElementById('category').value === 'equipement';
+  const slug = document.getElementById('category').value;
+  const isEquip = slug === 'equipement';
   document.getElementById('e-type').required = isEquip;
   document.getElementById('checklist-boat-only').style.display = isEquip ? 'none' : 'block';
+  // Le gréement n'a de sens que pour un voilier ou un catamaran — inutile de le montrer pour
+  // un bateau à moteur, un semi-rigide, un jet-ski, etc.
+  const greementSection = document.getElementById('greement-section');
+  if (greementSection) greementSection.style.display = (slug === 'voile' || slug === 'catamaran') ? 'block' : 'none';
   syncExpertiseVisibility();
 }
 
@@ -509,7 +573,7 @@ function parseLines(text) {
 
 // ---------- Brouillon auto-sauvegardé (survit aux coupures réseau / rechargements) ----------
 const DRAFT_KEY = 'kriee-draft-lot';
-const CHECK_GROUPS = ['nav-checks', 'greement-checks', 'securite-checks'];
+const CHECK_GROUPS = ['nav-checks', 'greement-checks', 'securite-checks', 'jetski-checks'];
 
 function saveDraft() {
   const fields = {};
@@ -683,7 +747,10 @@ async function initEditMode() {
   document.getElementById('reserve').value = lot.reserve_price;
   document.getElementById('increment').value = lot.bid_increment;
 
-  const isEquip = document.getElementById('category').value === 'equipement';
+  const categorySlug = document.getElementById('category').value;
+  const isEquip = categorySlug === 'equipement';
+  const isRemorque = categorySlug === 'remorque';
+  const isJetski = categorySlug === 'jetski';
   const g = lot.specs?.general || {};
 
   if (isEquip) {
@@ -694,6 +761,24 @@ async function initEditMode() {
     document.getElementById('e-annee').value = g["Année d'achat"] || '';
     document.getElementById('e-poids').value = g['Poids (kg)'] || '';
     document.getElementById('e-compat').value = g['Compatibilité'] || '';
+  } else if (isRemorque) {
+    document.getElementById('r-marque').value = g['Marque'] || '';
+    document.getElementById('r-annee').value = g['Année'] || '';
+    document.getElementById('r-essieu').value = g["Type d'essieu"] || '';
+    document.getElementById('r-ptac').value = g['PTAC (kg)'] || '';
+    document.getElementById('r-charge').value = g['Charge utile (kg)'] || '';
+    document.getElementById('r-freinage').value = g['Freinage'] || '';
+    document.getElementById('r-longueur').value = g['Longueur (m)'] || '';
+    document.getElementById('r-largeur').value = g['Largeur (m)'] || '';
+    document.getElementById('r-immat').value = g['Immatriculée'] || '';
+    document.getElementById('r-etat').value = g['État général'] || '';
+  } else if (isJetski) {
+    const m = lot.specs?.moteur || {};
+    document.getElementById('j-marque').value = m['Marque moteur'] || '';
+    document.getElementById('j-puissance').value = m['Puissance (ch)'] || '';
+    document.getElementById('j-heures').value = m['Heures moteur'] || '';
+    const eq = lot.specs?.equipement_fourni || {};
+    document.querySelectorAll('#jetski-checks input[type="checkbox"]').forEach(cb => { cb.checked = !!eq[cb.value]; });
   } else {
     document.getElementById('b-marque').value = g['Marque'] || '';
     document.getElementById('b-modele').value = g['Modèle / Type'] || '';
@@ -784,6 +869,8 @@ document.getElementById('sell-form').addEventListener('submit', async (e) => {
 
   const categorySlug = document.getElementById('category').value;
   const isEquip = categorySlug === 'equipement';
+  const isRemorque = categorySlug === 'remorque';
+  const isJetski = categorySlug === 'jetski';
 
   const { data: cat, error: catError } = await supabaseClient.from('categories').select('id').eq('slug', categorySlug).single();
   if (catError || !cat) {
@@ -802,6 +889,19 @@ document.getElementById('sell-form').addEventListener('submit', async (e) => {
       "Année d'achat": document.getElementById('e-annee').value,
       "Poids (kg)": document.getElementById('e-poids').value,
       "Compatibilité": document.getElementById('e-compat').value,
+    };
+  } else if (isRemorque) {
+    generalSpecs = {
+      "Marque": document.getElementById('r-marque').value,
+      "Année": document.getElementById('r-annee').value,
+      "Type d'essieu": document.getElementById('r-essieu').value,
+      "PTAC (kg)": document.getElementById('r-ptac').value,
+      "Charge utile (kg)": document.getElementById('r-charge').value,
+      "Freinage": document.getElementById('r-freinage').value,
+      "Longueur (m)": document.getElementById('r-longueur').value,
+      "Largeur (m)": document.getElementById('r-largeur').value,
+      "Immatriculée": document.getElementById('r-immat').value,
+      "État général": document.getElementById('r-etat').value,
     };
   } else {
     generalSpecs = {
@@ -824,7 +924,18 @@ document.getElementById('sell-form').addEventListener('submit', async (e) => {
     documents: parseLines(document.getElementById('documents').value),
   };
 
-  if (!isEquip) {
+  if (isJetski) {
+    // Jet-ski : pas de gréement, pas d'électronique de navigation type GPS/AIS/radar — juste le
+    // moteur et l'équipement fourni.
+    const jetskiMoteur = {
+      "Marque moteur": document.getElementById('j-marque').value,
+      "Puissance (ch)": document.getElementById('j-puissance').value,
+      "Heures moteur": document.getElementById('j-heures').value,
+    };
+    Object.keys(jetskiMoteur).forEach(k => { if (!jetskiMoteur[k]) delete jetskiMoteur[k]; });
+    specs.moteur = jetskiMoteur;
+    specs.equipement_fourni = checksToObject('jetski-checks');
+  } else if (!isEquip && !isRemorque) {
     const moteurSpecs = {
       "Type de moteur": document.getElementById('m-type').value,
       "Marque moteur": document.getElementById('m-marque').value,
@@ -835,12 +946,16 @@ document.getElementById('sell-form').addEventListener('submit', async (e) => {
     specs.moteur = moteurSpecs;
     specs.navigation = checksToObject('nav-checks');
 
-    const greementSpecs = checksToObject('greement-checks');
-    const gMats = document.getElementById('g-mats').value;
-    const gEtat = document.getElementById('g-etat').value;
-    if (gMats) greementSpecs['Nombre de mâts'] = gMats;
-    if (gEtat) greementSpecs['État des voiles'] = gEtat;
-    specs.greement = greementSpecs;
+    // Le gréement ne s'applique qu'aux voiliers/catamarans (section masquée sinon) — on ne
+    // l'enregistre que dans ce cas, pour ne pas polluer les specs d'un bateau à moteur.
+    if (categorySlug === 'voile' || categorySlug === 'catamaran') {
+      const greementSpecs = checksToObject('greement-checks');
+      const gMats = document.getElementById('g-mats').value;
+      const gEtat = document.getElementById('g-etat').value;
+      if (gMats) greementSpecs['Nombre de mâts'] = gMats;
+      if (gEtat) greementSpecs['État des voiles'] = gEtat;
+      specs.greement = greementSpecs;
+    }
 
     specs.securite = checksToObject('securite-checks');
   }
