@@ -335,7 +335,7 @@
       <p class="section-title">Description & documents</p>
       <div class="field">
         <label for="description">Description</label>
-        <textarea id="description" required placeholder="État général, historique, ce qui est inclus dans la vente..."></textarea>
+        <textarea id="description" required placeholder="État général, historique, ce qui est inclus dans la vente, défauts connus..."></textarea>
       </div>
 
       <div class="field" id="checklist-boat-only">
@@ -373,7 +373,8 @@
         <textarea id="documents" placeholder="Acte de francisation&#10;Dernier rapport de visite technique"></textarea>
       </div>
       <div class="field">
-        <label for="photos">Photos</label>
+        <label for="photos">Photos <span style="color:var(--buoy);">*</span></label>
+        <p class="hint" style="margin:0 0 0.6rem;">Vendu en l'état — les photos sont la principale garantie de transparence pour l'acheteur, qui ne visitera pas le bien avant d'enchérir. Montre tout, y compris les défauts, l'usure ou les zones abîmées : une photo honnête protège autant l'acheteur que toi en cas de litige après-vente. Au moins une photo est obligatoire.</p>
         <input type="file" id="photos" accept="image/*" multiple>
         <p class="hint" style="margin:0.4rem 0 0;">Ajoute une ou plusieurs photos, puis choisis la couverture et l'ordre d'affichage ci-dessous.</p>
         <div id="photos-list" class="photo-list"></div>
@@ -870,6 +871,18 @@ document.getElementById('sell-form').addEventListener('submit', async (e) => {
 
   const feedback = document.getElementById('sell-feedback');
   const isConfigured = !SUPABASE_URL.includes('TON-PROJET');
+
+  // Au moins une photo est obligatoire — la transparence du modèle "vendu en l'état" repose
+  // entièrement sur ce que l'acheteur peut voir, pas de fiche sans aucune photo.
+  const hasExistingPhotos = existingLotData && existingLotData.images && existingLotData.images.length > 0;
+  if (selectedPhotos.length === 0 && !hasExistingPhotos) {
+    const photoStep = currentSteps().indexOf('4');
+    if (photoStep !== -1) { stepIndex = photoStep; showStep(); }
+    feedback.textContent = 'Au moins une photo est obligatoire avant de pouvoir déposer ton lot.';
+    feedback.style.color = 'var(--buoy)';
+    document.getElementById('photos').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
 
   if (!isConfigured) {
     feedback.textContent = 'Démo : connecte Supabase (js/supabase-client.js) pour publier réellement un lot.';
