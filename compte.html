@@ -47,6 +47,15 @@
   .sale-card__contact { background: var(--chalk); border-radius: 3px; padding: 0.9rem 1.1rem; margin-top: 1rem; font-size: 0.9rem; }
   .sale-card__contact strong { display: block; margin-bottom: 0.3rem; }
   .sale-card__cancelled { color: var(--buoy); font-size: 0.85rem; margin-top: 0.6rem; }
+
+  @media (max-width: 640px) {
+    /* Sans photo, le bloc titre est assez étroit pour que le prix tienne à côté sur la même
+       ligne (le retour à la ligne du flex-wrap ne se déclenche que s'il manque de place) — d'où
+       l'incohérence entre les lots avec et sans photo. Empilement systématique ici, plutôt que
+       de dépendre de la largeur du contenu. */
+    .sale-card__top { flex-direction: column; align-items: flex-start; gap: 0.6rem; }
+    .sale-card__price { font-size: 1.15rem; }
+  }
   .gate { max-width: 480px; margin: 4rem auto; padding: 2rem; text-align: center; }
 </style>
 </head>
