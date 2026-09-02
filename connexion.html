@@ -95,37 +95,58 @@
   <div id="auth-forms">
     <p class="lead">Nécessaire pour enchérir ou déposer un lot.</p>
 
-    <!-- Chemin par défaut : un email suffit, pas de mot de passe à retenir. -->
-    <form id="magic-form">
+    <!-- Chemin par défaut : email + mot de passe -->
+    <form id="password-form">
       <div class="field">
-        <label for="magic-email">Adresse email</label>
-        <input type="email" id="magic-email" required placeholder="toi@exemple.fr" autocomplete="email" name="email" autofocus>
+        <label for="pw-email">Adresse email</label>
+        <input type="email" id="pw-email" required placeholder="toi@exemple.fr" autocomplete="username" name="username" autofocus>
       </div>
-      <button type="submit" class="btn btn--primary" style="width:100%; padding:0.75rem;">Recevoir le lien de connexion</button>
+      <div class="field">
+        <label for="pw-password">Mot de passe</label>
+        <div class="password-field-wrap">
+          <input type="password" id="pw-password" required minlength="8" autocomplete="current-password" name="current-password">
+          <button type="button" class="password-toggle-btn" id="pw-toggle" aria-label="Afficher le mot de passe" title="Afficher le mot de passe">👁</button>
+        </div>
+      </div>
+      <button type="submit" class="btn btn--primary" style="width:100%; padding:0.75rem;">Se connecter</button>
     </form>
 
-    <button type="button" class="auth-switch" id="toggle-password-panel">Se connecter avec un mot de passe à la place</button>
+    <button type="button" class="auth-switch" id="toggle-signup-panel">Pas de compte ? Créer un compte avec un mot de passe</button>
 
-    <!-- Repliée par défaut — pour les comptes créés avec mot de passe, ou ceux qui préfèrent -->
-    <div class="auth-panel--secondary" id="panel-password" style="display:none;">
-      <form id="password-form">
+    <!-- Formulaire distinct de celui de connexion — id/name/autocomplete propres, pour que les
+         gestionnaires de mots de passe distinguent clairement "connexion" (current-password,
+         propose un identifiant déjà enregistré) de "inscription" (new-password, propose de
+         générer un mot de passe fort). Un seul champ partagé entre les deux usages ne permet
+         de bien faire ni l'un ni l'autre. -->
+    <div class="auth-panel--secondary" id="panel-signup" style="display:none;">
+      <form id="signup-form">
         <div class="field">
-          <label for="pw-email">Adresse email</label>
-          <input type="email" id="pw-email" required placeholder="toi@exemple.fr" autocomplete="username" name="username">
+          <label for="signup-email">Adresse email</label>
+          <input type="email" id="signup-email" required placeholder="toi@exemple.fr" autocomplete="username" name="username">
         </div>
         <div class="field">
-          <label for="pw-password">Mot de passe</label>
+          <label for="signup-password">Mot de passe</label>
           <div class="password-field-wrap">
-            <input type="password" id="pw-password" required minlength="8" autocomplete="new-password" name="new-password">
-            <button type="button" class="password-toggle-btn" id="pw-toggle" aria-label="Afficher le mot de passe" title="Afficher le mot de passe">👁</button>
+            <input type="password" id="signup-password" required minlength="8" autocomplete="new-password" name="new-password">
+            <button type="button" class="password-toggle-btn" id="signup-pw-toggle" aria-label="Afficher le mot de passe" title="Afficher le mot de passe">👁</button>
           </div>
           <p class="hint" style="font-size:0.74rem; margin:0.35rem 0 0;">Ton navigateur peut te proposer et enregistrer un mot de passe fort automatiquement.</p>
         </div>
-        <button type="submit" class="btn btn--primary" style="width:100%; padding:0.75rem;">Se connecter</button>
+        <button type="submit" class="btn btn--primary" style="width:100%; padding:0.75rem;">Créer mon compte</button>
       </form>
-      <p style="margin-top:0.8rem; font-size:0.85rem;">
-        Pas de compte ? <button class="link-btn" id="signup-btn">Créer un compte avec ce mot de passe</button>
-      </p>
+    </div>
+
+    <button type="button" class="auth-switch" id="toggle-password-panel">Se connecter sans mot de passe à la place</button>
+
+    <!-- Repliée par défaut -->
+    <div class="auth-panel--secondary" id="panel-password" style="display:none;">
+      <form id="magic-form">
+        <div class="field">
+          <label for="magic-email">Adresse email</label>
+          <input type="email" id="magic-email" required placeholder="toi@exemple.fr" autocomplete="email" name="email">
+        </div>
+        <button type="submit" class="btn btn--primary" style="width:100%; padding:0.75rem;">Recevoir le lien de connexion</button>
+      </form>
     </div>
 
     <p id="auth-feedback" role="status"></p>
@@ -162,26 +183,42 @@ document.getElementById('logout-btn').addEventListener('click', async () => {
   location.reload();
 });
 
-// Panneau mot de passe replié par défaut — divulgation progressive plutôt que deux onglets à
-// poids égal : la plupart des gens veulent juste se connecter vite, sans choisir une méthode
-// avant même de savoir laquelle les concerne.
+// Panneau lien magique replié par défaut — email + mot de passe reste le chemin principal.
 const togglePasswordBtn = document.getElementById('toggle-password-panel');
 const panelPassword = document.getElementById('panel-password');
 togglePasswordBtn.addEventListener('click', () => {
   const isOpen = panelPassword.style.display !== 'none';
   panelPassword.style.display = isOpen ? 'none' : 'block';
-  togglePasswordBtn.textContent = isOpen ? 'Se connecter avec un mot de passe à la place' : 'Revenir à la connexion sans mot de passe';
+  togglePasswordBtn.textContent = isOpen ? 'Se connecter sans mot de passe à la place' : 'Revenir à la connexion avec mot de passe';
   setFeedback('', false);
-  if (!isOpen) document.getElementById('pw-email').focus();
+  if (!isOpen) document.getElementById('magic-email').focus();
 });
 
-// Afficher/masquer le mot de passe saisi — remplace l'ancien bouton "Générer", devenu inutile
-// puisque les navigateurs proposent déjà nativement un mot de passe fort à la création.
+// Afficher/masquer le mot de passe saisi (connexion)
 document.getElementById('pw-toggle').addEventListener('click', () => {
   const input = document.getElementById('pw-password');
   const isHidden = input.type === 'password';
   input.type = isHidden ? 'text' : 'password';
   document.getElementById('pw-toggle').textContent = isHidden ? '🙈' : '👁';
+});
+
+// Afficher/masquer le mot de passe saisi (inscription)
+document.getElementById('signup-pw-toggle').addEventListener('click', () => {
+  const input = document.getElementById('signup-password');
+  const isHidden = input.type === 'password';
+  input.type = isHidden ? 'text' : 'password';
+  document.getElementById('signup-pw-toggle').textContent = isHidden ? '🙈' : '👁';
+});
+
+// Panneau inscription replié par défaut
+const toggleSignupBtn = document.getElementById('toggle-signup-panel');
+const panelSignup = document.getElementById('panel-signup');
+toggleSignupBtn.addEventListener('click', () => {
+  const isOpen = panelSignup.style.display !== 'none';
+  panelSignup.style.display = isOpen ? 'none' : 'block';
+  toggleSignupBtn.textContent = isOpen ? 'Pas de compte ? Créer un compte avec un mot de passe' : 'Revenir à la connexion';
+  setFeedback('', false);
+  if (!isOpen) document.getElementById('signup-email').focus();
 });
 
 // Lien magique
@@ -208,14 +245,11 @@ document.getElementById('password-form').addEventListener('submit', async (e) =>
   else location.href = 'index.html';
 });
 
-// Créer un compte avec email + mot de passe (self-service)
-document.getElementById('signup-btn').addEventListener('click', async () => {
-  const email = document.getElementById('pw-email').value;
-  const password = document.getElementById('pw-password').value;
-  if (!email || !password || password.length < 8) {
-    setFeedback('Renseigne un email et un mot de passe (8 caractères min.) avant de créer le compte.', true);
-    return;
-  }
+// Créer un compte — formulaire dédié, distinct de celui de connexion
+document.getElementById('signup-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const email = document.getElementById('signup-email').value;
+  const password = document.getElementById('signup-password').value;
   setFeedback('Création du compte…', false);
   const { error } = await supabaseClient.auth.signUp({ email, password });
   if (error) setFeedback(error.message, true);
