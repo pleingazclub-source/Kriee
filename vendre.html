@@ -660,6 +660,16 @@ document.getElementById('new-lot-btn').addEventListener('click', () => {
 // ---------- Gestion des photos : ajout, couverture, ordre, suppression ----------
 let selectedPhotos = [];
 
+// Réutilise le même mécanisme de validation native que les autres champs obligatoires (voir
+// attemptGoToStep/wizard-next, qui bloquent déjà sur ':invalid') — une fois marqué invalide ici,
+// impossible de passer à l'étape suivante sans photo, exactement comme un champ texte vide.
+function syncPhotoValidity() {
+  const hasExisting = existingLotData && existingLotData.images && existingLotData.images.length > 0;
+  document.getElementById('photos').setCustomValidity(
+    (selectedPhotos.length === 0 && !hasExisting) ? 'Ajoute au moins une photo avant de continuer.' : ''
+  );
+}
+
 function renderPhotoList() {
   const list = document.getElementById('photos-list');
   list.innerHTML = selectedPhotos.map((file, i) => `
@@ -692,6 +702,7 @@ function renderPhotoList() {
       renderPhotoList();
     });
   });
+  syncPhotoValidity();
 }
 
 document.getElementById('photos').addEventListener('change', (e) => {
@@ -836,6 +847,7 @@ async function initEditMode() {
        <div class="media-preview">${existingLotData.images.map(url => `<img src="${url}">`).join('')}</div>`
     );
   }
+  syncPhotoValidity();
 
   syncRequiredFields();
   showStep();
@@ -843,6 +855,10 @@ async function initEditMode() {
 
 if (!editLotId) restoreDraft();
 initEditMode();
+// Cas du tout premier chargement (ni brouillon ni édition) : le champ photo doit être invalide
+// dès le départ, pas seulement après une interaction — sinon "Suivant" reste cliquable sans
+// jamais avoir déclenché syncPhotoValidity() une seule fois.
+syncPhotoValidity();
 checkProfileCompleteForSelling();
 
 async function checkProfileCompleteForSelling() {
