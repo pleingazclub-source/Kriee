@@ -618,6 +618,11 @@ a { color: inherit; }
 }
 .site-footer strong { color: var(--foam); }
 
+/* Doublon du statut affiché sous le titre du lot — utile seulement sur mobile (voir plus bas),
+   cette classe reste masquée par défaut pour ne jamais apparaître en double sur desktop, où le
+   statut garde sa propre colonne. */
+.mobile-status-inline, .mobile-status-break { display: none; }
+
 /* ---------- Responsive mobile ---------- */
 @media (max-width: 640px) {
   .site-header {
@@ -666,11 +671,18 @@ a { color: inherit; }
   #my-favorites-table th:nth-child(6), #my-favorites-table td:nth-child(6),
   #my-bids-table th:nth-child(3), #my-bids-table td:nth-child(3),
   #my-bids-table th:nth-child(4), #my-bids-table td:nth-child(4),
+  #my-bids-table th:nth-child(7), #my-bids-table td:nth-child(7),
   #my-bids-table th:nth-child(8), #my-bids-table td:nth-child(8),
   #my-lots-table th:nth-child(3), #my-lots-table td:nth-child(3),
   #my-lots-table th:nth-child(4), #my-lots-table td:nth-child(4),
   #my-lots-table th:nth-child(5), #my-lots-table td:nth-child(5),
+  #my-lots-table th:nth-child(8), #my-lots-table td:nth-child(8),
   #my-lots-table th:nth-child(9), #my-lots-table td:nth-child(9) {
     display: none;
   }
+  /* Le statut se déplace sous le titre du lot plutôt que de rester dans sa propre colonne —
+     coincé entre "Enchère actuelle" et le reste, il n'avait pas la place de tenir sur une seule
+     ligne (le badge "Enchère gagnée" se cassait en deux). Là, il a toute la largeur de la cellule. */
+  .mobile-status-inline { display: inline-block; margin-top: 0.3rem; }
+  .mobile-status-break { display: block; }
 }
