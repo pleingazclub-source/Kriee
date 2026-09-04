@@ -13,6 +13,7 @@ async function initAuthNav() {
   const emailEl = document.getElementById('user-menu-email');
   const adminLink = document.getElementById('user-menu-admin-link');
   const activiteBadge = document.getElementById('user-menu-activite-badge');
+  const toggleBadge = document.getElementById('user-menu-toggle-badge');
   const logoutBtn = document.getElementById('user-menu-logout');
 
   toggle.addEventListener('click', (e) => {
@@ -26,19 +27,25 @@ async function initAuthNav() {
     location.href = 'index.html';
   });
 
-  // Compteur de notifications non lues, affiché sur "Mon activité" dans ce menu déroulant —
-  // même donnée que les badges par sous-onglet de compte.html, mais visible depuis n'importe
-  // quelle page sans avoir à ouvrir le compte.
+  // Compteur de notifications non lues — affiché à la fois sur le bouton fermé (pour être visible
+  // sans avoir à ouvrir le menu) et sur "Mon activité" une fois le menu déroulant ouvert. Même
+  // donnée que les badges par sous-onglet de compte.html.
   async function refreshActiviteBadge(userId) {
-    if (!activiteBadge) return;
     const { count } = await supabaseClient
       .from('notifications')
       .select('id', { count: 'exact', head: true })
       .eq('user_id', userId)
       .is('read_at', null)
       .in('type', Object.keys(NOTIF_TYPE_TO_SUBTAB));
-    activiteBadge.textContent = count > 9 ? '9+' : String(count || 0);
-    activiteBadge.style.display = count > 0 ? 'inline-flex' : 'none';
+    const display = count > 9 ? '9+' : String(count || 0);
+    if (activiteBadge) {
+      activiteBadge.textContent = display;
+      activiteBadge.style.display = count > 0 ? 'inline-flex' : 'none';
+    }
+    if (toggleBadge) {
+      toggleBadge.textContent = display;
+      toggleBadge.style.display = count > 0 ? 'inline-flex' : 'none';
+    }
   }
 
   let renderGen = 0;
