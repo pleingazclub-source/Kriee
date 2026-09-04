@@ -23,12 +23,16 @@ async function initAuthNav() {
   // sans avoir à ouvrir le menu) et sur "Mon activité" une fois le menu déroulant ouvert. Même
   // donnée que les badges par sous-onglet de compte.html.
   async function refreshActiviteBadge(userId) {
-    const { count } = await supabaseClient
+    // Même métrique que "Mon activité" sur compte.html (nombre de LOTS distincts concernés par
+    // une notification non lue) — pas un comptage de notifications par type, pour que le badge
+    // affiché ici, avant même d'ouvrir le compte, corresponde exactement à ce qu'on y retrouve.
+    const { data } = await supabaseClient
       .from('notifications')
-      .select('id', { count: 'exact', head: true })
+      .select('lot_id')
       .eq('user_id', userId)
       .is('read_at', null)
-      .in('type', Object.keys(NOTIF_TYPE_TO_SUBTAB));
+      .not('lot_id', 'is', null);
+    const count = new Set((data || []).map(n => n.lot_id)).size;
     const display = count > 9 ? '9+' : String(count || 0);
     if (activiteBadge) {
       activiteBadge.textContent = display;
