@@ -296,7 +296,18 @@
 <script src="js/auth.js"></script>
 <script src="js/push.js"></script>
 <script>
+let initInFlight = false; // évite deux exécutions simultanées (ex. visibilitychange qui se déclenche deux fois rapprochées)
 async function init() {
+  if (initInFlight) return;
+  initInFlight = true;
+  try {
+    await initImpl();
+  } finally {
+    initInFlight = false;
+  }
+}
+
+async function initImpl() {
   const { data: { session } } = await supabaseClient.auth.getSession();
   if (!session) {
     document.getElementById('gate-denied').style.display = 'block';
@@ -415,6 +426,7 @@ async function markLotNotificationsRead(lotId) {
 }
 
 // ---------- Préférences de notifications (email + push web) ----------
+let notifListenersAttached = false; // init() peut se rejouer (retour bfcache) — évite les écouteurs en double
 async function initNotificationPrefs(userId) {
   const emailToggle = document.getElementById('notif-email-toggle');
   const pushToggle = document.getElementById('notif-push-toggle');
@@ -438,26 +450,29 @@ async function initNotificationPrefs(userId) {
     if (error) { feedback.textContent = 'Erreur : ' + error.message; feedback.style.color = 'var(--buoy)'; }
   }
 
-  emailToggle.addEventListener('change', () => upsertPrefs({ email_enabled: emailToggle.checked }));
+  if (!notifListenersAttached) {
+    notifListenersAttached = true;
+    emailToggle.addEventListener('change', () => upsertPrefs({ email_enabled: emailToggle.checked }));
 
-  pushToggle.addEventListener('change', async () => {
-    feedback.textContent = '';
-    if (pushToggle.checked) {
-      try {
-        await subscribeToPush(userId);
-        await upsertPrefs({ push_enabled: true });
-        feedback.textContent = 'Notifications push activées.';
-        feedback.style.color = 'var(--mistral)';
-      } catch (err) {
-        pushToggle.checked = false;
-        feedback.textContent = err.message;
-        feedback.style.color = 'var(--buoy)';
+    pushToggle.addEventListener('change', async () => {
+      feedback.textContent = '';
+      if (pushToggle.checked) {
+        try {
+          await subscribeToPush(userId);
+          await upsertPrefs({ push_enabled: true });
+          feedback.textContent = 'Notifications push activées.';
+          feedback.style.color = 'var(--mistral)';
+        } catch (err) {
+          pushToggle.checked = false;
+          feedback.textContent = err.message;
+          feedback.style.color = 'var(--buoy)';
+        }
+      } else {
+        await unsubscribeFromPush(userId);
+        await upsertPrefs({ push_enabled: false });
       }
-    } else {
-      await unsubscribeFromPush(userId);
-      await upsertPrefs({ push_enabled: false });
-    }
-  });
+    });
+  }
 }
 
 async function loadMyFavorites(userId) {
@@ -511,7 +526,14 @@ async function loadMyLots(userId) {
   (salesData || []).forEach(s => { myLotsSalesByLot[s.lot_id] = s; });
 
   if (error || !data) { myLotsData = []; renderMyLots(); return; }
-  myLotsData = data;
+  // Sécurité : un même lot ne doit jamais apparaître deux fois (garde même si la cause exacte
+  // d'un éventuel doublon en amont — requête, jointure — n'est pas là).
+  const seenIds = new Set();
+  myLotsData = data.filter(l => {
+    if (seenIds.has(l.id)) return false;
+    seenIds.add(l.id);
+    return true;
+  });
   renderMyLots();
 }
 
@@ -1003,6 +1025,25 @@ window.addEventListener('hashchange', () => {
 });
 
 init();
+
+// Le retour arrière (bouton ou geste de glissement) restaure souvent cette page depuis le cache
+// mémoire du navigateur (bfcache) plutôt que de la recharger — sans ce correctif, badges et
+// points restent figés à l'état d'avant la consultation d'un lot. "pageshow" + persisted est le
+// signal standard, mais le geste de glissement d'Android ne le déclenche pas toujours de façon
+// fiable — "visibilitychange" sert de filet de sécurité, plus universel (se déclenche dès que la
+// page redevient visible, quelle que soit la raison).
+let lastRefresh = Date.now();
+function refreshOnReturn() {
+  if (Date.now() - lastRefresh < 500) return; // évite un double déclenchement rapproché
+  lastRefresh = Date.now();
+  init();
+}
+window.addEventListener('pageshow', (event) => {
+  if (event.persisted) refreshOnReturn();
+});
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') refreshOnReturn();
+});
 </script>
 </body>
 </html>
