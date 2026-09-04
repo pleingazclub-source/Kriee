@@ -547,3 +547,14 @@ document.getElementById('favorite-btn').addEventListener('click', async () => {
 initFavoriteAndViews();
 
 loadLot();
+
+// Le retour arrière restaure souvent cette page depuis le cache mémoire du navigateur (bfcache)
+// plutôt que de la recharger — sans ça, le prix/statut de l'enchère et l'état "favori" resteraient
+// figés à l'état d'avant la navigation. Les compteurs protégés (vues, abonnement temps réel) ne
+// se déclenchent pas en double, voir les gardes channelSubscribed/viewCounted plus haut.
+window.addEventListener('pageshow', (event) => {
+  if (event.persisted) {
+    loadLot();
+    initFavoriteAndViews();
+  }
+});

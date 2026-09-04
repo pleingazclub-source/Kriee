@@ -1,6 +1,9 @@
 // Gère le menu "Se connecter" / menu utilisateur déroulant, sur toutes les pages.
 // Nécessite que supabase-client.js soit chargé avant ce script.
 
+let authNavListenersAttached = false; // évite les écouteurs/abonnements en double si initAuthNav()
+                                       // se rejoue (retour bfcache, voir plus bas)
+
 async function initAuthNav() {
   const navLogin = document.getElementById('nav-login');
   const userMenu = document.getElementById('user-menu');
@@ -15,17 +18,6 @@ async function initAuthNav() {
   const activiteBadge = document.getElementById('user-menu-activite-badge');
   const toggleBadge = document.getElementById('user-menu-toggle-badge');
   const logoutBtn = document.getElementById('user-menu-logout');
-
-  toggle.addEventListener('click', (e) => {
-    e.stopPropagation();
-    dropdown.classList.toggle('open');
-  });
-  document.addEventListener('click', () => dropdown.classList.remove('open'));
-
-  logoutBtn.addEventListener('click', async () => {
-    await supabaseClient.auth.signOut();
-    location.href = 'index.html';
-  });
 
   // Compteur de notifications non lues — affiché à la fois sur le bouton fermé (pour être visible
   // sans avoir à ouvrir le menu) et sur "Mon activité" une fois le menu déroulant ouvert. Même
@@ -78,10 +70,32 @@ async function initAuthNav() {
     }
   }
 
+  if (!authNavListenersAttached) {
+    authNavListenersAttached = true;
+    toggle.addEventListener('click', (e) => {
+      e.stopPropagation();
+      dropdown.classList.toggle('open');
+    });
+    document.addEventListener('click', () => dropdown.classList.remove('open'));
+
+    logoutBtn.addEventListener('click', async () => {
+      await supabaseClient.auth.signOut();
+      location.href = 'index.html';
+    });
+
+    supabaseClient.auth.onAuthStateChange((_event, newSession) => render(newSession));
+  }
+
   const { data: { session } } = await supabaseClient.auth.getSession();
   render(session);
-
-  supabaseClient.auth.onAuthStateChange((_event, newSession) => render(newSession));
 }
 
 initAuthNav();
+
+// Le bouton/geste "retour" restaure souvent la page depuis le cache mémoire du navigateur
+// (bfcache) plutôt que de la recharger — sans ce correctif, le badge de notifications reste figé
+// à l'état d'avant que tu aies consulté un lot ou une vente. Générique à toutes les pages,
+// puisque ce fichier est chargé partout.
+window.addEventListener('pageshow', (event) => {
+  if (event.persisted) initAuthNav();
+});

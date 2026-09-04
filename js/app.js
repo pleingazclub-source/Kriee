@@ -34,6 +34,7 @@ let sortBy = 'ending-soon';
 let userCoords = null; // { lat, lng } une fois la géolocalisation acceptée
 let myFavoriteIds = new Set();
 let lots = [];
+let realtimeLotsSubscribed = false; // évite les abonnements en double si loadLots() se rejoue (retour bfcache)
 
 // Coordonnées approximatives par région — faute de géocoder chaque port individuellement pour l'instant.
 // Précision suffisante pour classer "proche / loin" à l'échelle du Sud de la France, pas pour une distance exacte.
@@ -112,10 +113,15 @@ async function loadLots() {
   }
   render();
 
-  // Temps réel : recharge quand une enchère ou un lot change
-  supabaseClient.channel('public:lots')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'lots' }, loadLots)
-    .subscribe();
+  // Temps réel : recharge quand une enchère ou un lot change — un seul abonnement, jamais recréé
+  // si loadLots() se rejoue (retour bfcache, voir plus bas), sinon ils s'empileraient à chaque
+  // retour et chacun redéclencherait ce même rechargement.
+  if (!realtimeLotsSubscribed) {
+    realtimeLotsSubscribed = true;
+    supabaseClient.channel('public:lots')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'lots' }, loadLots)
+      .subscribe();
+  }
 }
 
 function render() {
@@ -368,3 +374,10 @@ document.getElementById('lots')?.addEventListener('click', handleCardHeartClick)
 document.getElementById('trending-grid')?.addEventListener('click', handleCardHeartClick);
 
 loadLots();
+
+// Le retour arrière restaure souvent la page depuis le cache mémoire du navigateur (bfcache)
+// plutôt que de la recharger — les lots affichés resteraient figés (prix, clôture, statut) sans
+// ce correctif. L'abonnement temps réel, lui, ne se recrée pas (voir la garde dans loadLots()).
+window.addEventListener('pageshow', (event) => {
+  if (event.persisted) loadLots();
+});
