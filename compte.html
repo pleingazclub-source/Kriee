@@ -317,7 +317,6 @@ async function init() {
   ]);
   if (location.hash === '#achats') {
     switchActiviteSubtab('achats');
-    markSubtabNotificationsRead('achats');
   }
 }
 
@@ -367,18 +366,14 @@ function unreadDotHTML(lotId) {
     : '';
 }
 
-// Marque comme lues les notifications du sous-onglet consulté, et fait disparaître son badge
-// ainsi que les repères sur les lignes concernées (en re-rendant le tableau du sous-onglet).
-async function markSubtabNotificationsRead(subtab) {
-  if (!currentUserId) return;
-  const types = Object.entries(NOTIF_TYPE_TO_SUBTAB).filter(([, s]) => s === subtab).map(([t]) => t);
-  if (!types.length) return;
+// Marque comme lues les notifications d'UN SEUL lot (pas toute la catégorie) — appelée quand on
+// consulte vraiment ce lot précis (clic sur la ligne, "Voir les coordonnées", etc.), pas juste en
+// ouvrant l'onglet. Le badge du sous-onglet se décrémente au fur et à mesure, lot par lot.
+async function markLotNotificationsRead(lotId) {
+  if (!currentUserId || !lotId || !unreadLotIds.has(lotId)) return;
   await supabaseClient.from('notifications').update({ read_at: new Date().toISOString() })
-    .eq('user_id', currentUserId).in('type', types).is('read_at', null);
+    .eq('user_id', currentUserId).eq('lot_id', lotId).is('read_at', null);
   await loadNotificationBadges(currentUserId);
-  if (subtab === 'lots') renderMyLots();
-  else if (subtab === 'encheres') loadMyBids(currentUserId);
-  else if (subtab === 'achats') loadMyPurchases(currentUserId);
 }
 
 // ---------- Préférences de notifications (email + push web) ----------
@@ -514,7 +509,7 @@ function renderMyLots() {
     let saleActionHTML = '';
     if (sale && sale.status !== 'cancelled') {
       if (sale.status === 'confirmed') {
-        saleActionHTML = `${paymentDeadlineHTML(sale.confirmed_at)}<button type="button" class="btn btn--ghost btn--sm" data-sale-reveal="${sale.id}" style="margin-top:0.4rem; display:block;">Voir les coordonnées</button>`;
+        saleActionHTML = `${paymentDeadlineHTML(sale.confirmed_at)}<button type="button" class="btn btn--ghost btn--sm" data-sale-reveal="${sale.id}" data-lot-id="${l.id}" style="margin-top:0.4rem; display:block;">Voir les coordonnées</button>`;
       } else if (sale.status === 'awaiting_expertise') {
         if (l.expertise_status === 'pending') {
           saleActionHTML = `<div style="background:var(--chalk); padding:0.7rem 0.9rem; border-radius:3px; font-size:0.78rem; margin-top:0.4rem;">Rapport envoyé, en attente de validation par Kriee — les coordonnées se débloqueront automatiquement une fois validé.</div>`;
@@ -538,8 +533,8 @@ function renderMyLots() {
         saleActionHTML = `
           ${reserveNote}
           <div style="margin-top:0.4rem; display:flex; gap:0.4rem;">
-            <button type="button" class="btn btn--primary btn--sm" data-sale-action="accept" data-sale-id="${sale.id}" style="padding:0.35rem 0.7rem; font-size:0.78rem;">Accepter</button>
-            <button type="button" class="btn--danger btn--sm" data-sale-action="reject" data-sale-id="${sale.id}" style="padding:0.35rem 0.7rem; font-size:0.78rem;">Refuser</button>
+            <button type="button" class="btn btn--primary btn--sm" data-sale-action="accept" data-sale-id="${sale.id}" data-lot-id="${l.id}" style="padding:0.35rem 0.7rem; font-size:0.78rem;">Accepter</button>
+            <button type="button" class="btn--danger btn--sm" data-sale-action="reject" data-sale-id="${sale.id}" data-lot-id="${l.id}" style="padding:0.35rem 0.7rem; font-size:0.78rem;">Refuser</button>
           </div>`;
       } else {
         saleActionHTML = `<div style="font-size:0.78rem; color:#5A6772; margin-top:0.4rem;">En attente de l'acheteur.</div>`;
@@ -689,17 +684,17 @@ function saleCardHTML(s, role) {
   if (s.status === 'confirmed') {
     actionsHTML = `<div class="sale-card__contact" id="contact-${s.id}">
       ${paymentDeadlineHTML(s.confirmed_at)}
-      <button type="button" class="btn btn--ghost btn--sm" data-sale-reveal="${s.id}">Voir les coordonnées</button>
+      <button type="button" class="btn btn--ghost btn--sm" data-sale-reveal="${s.id}" data-lot-id="${s.lot_id}">Voir les coordonnées</button>
     </div>`;
   } else if (myDecision === null || myDecision === undefined) {
     actionsHTML = role === 'seller'
       ? `<div class="sale-card__actions">
-           <button type="button" class="btn btn--primary btn--sm" data-sale-action="accept" data-sale-id="${s.id}">Accepter la vente</button>
-           <button type="button" class="btn--danger btn--sm" data-sale-action="reject" data-sale-id="${s.id}">Refuser</button>
+           <button type="button" class="btn btn--primary btn--sm" data-sale-action="accept" data-sale-id="${s.id}" data-lot-id="${s.lot_id}">Accepter la vente</button>
+           <button type="button" class="btn--danger btn--sm" data-sale-action="reject" data-sale-id="${s.id}" data-lot-id="${s.lot_id}">Refuser</button>
          </div>`
       : `<div class="sale-card__actions">
-           <button type="button" class="btn btn--primary btn--sm" data-sale-action="confirm" data-sale-id="${s.id}">Je m'engage à payer</button>
-           <button type="button" class="btn--danger btn--sm" data-sale-action="cancel" data-sale-id="${s.id}">Annuler</button>
+           <button type="button" class="btn btn--primary btn--sm" data-sale-action="confirm" data-sale-id="${s.id}" data-lot-id="${s.lot_id}">Je m'engage à payer</button>
+           <button type="button" class="btn--danger btn--sm" data-sale-action="cancel" data-sale-id="${s.id}" data-lot-id="${s.lot_id}">Annuler</button>
          </div>`;
   } else {
     actionsHTML = `<p class="sale-card__waiting">En attente de ${theirLabel.toLowerCase()} (tu as déjà répondu).</p>`;
@@ -782,6 +777,7 @@ function wireSaleActions() {
 
       if (error) { alert('Erreur : ' + error.message); btn.disabled = false; return; }
 
+      await markLotNotificationsRead(btn.dataset.lotId);
       const { data: { session } } = await supabaseClient.auth.getSession();
       loadMyLots(session.user.id);
       loadMyPurchases(session.user.id);
@@ -791,6 +787,7 @@ function wireSaleActions() {
   document.querySelectorAll('button[data-sale-reveal]').forEach(btn => {
     btn.onclick = async () => {
       const saleId = btn.dataset.saleReveal;
+      await markLotNotificationsRead(btn.dataset.lotId);
       const { data, error } = await supabaseClient.rpc('get_sale_contact', { p_sale_id: saleId });
       const container = document.getElementById(`contact-${saleId}`);
       if (error || !data || !data[0]) {
@@ -926,10 +923,7 @@ function switchActiviteSubtab(name) {
   document.querySelectorAll('[data-panel="activite"] > .spec-panel').forEach(p => p.classList.toggle('active', p.dataset.subpanel === name));
 }
 document.querySelectorAll('#activite-subtabs .spec-tab').forEach(tab => {
-  tab.addEventListener('click', () => {
-    switchActiviteSubtab(tab.dataset.subtab);
-    markSubtabNotificationsRead(tab.dataset.subtab);
-  });
+  tab.addEventListener('click', () => switchActiviteSubtab(tab.dataset.subtab));
 });
 
 // Ouvre l'onglet correspondant au #hash de l'URL (ex. compte.html#activite, ou compte.html#achats
