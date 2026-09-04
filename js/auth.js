@@ -18,6 +18,14 @@ async function initAuthNav() {
   const moderationBadge = document.getElementById('user-menu-moderation-badge');
   const logoutBtn = document.getElementById('user-menu-logout');
 
+  // Le bouton fermé additionne les deux badges du menu (activité + modération) — sa raison
+  // d'être, c'est justement de résumer tout ce qui mérite attention sans avoir à ouvrir le menu.
+  let activiteCount = 0;
+  let moderationCount = 0;
+  function updateToggleBadge() {
+    applyBadge('user-menu-toggle-badge', activiteCount + moderationCount);
+  }
+
   // Compteur de notifications non lues — affiché à la fois sur le bouton fermé (pour être visible
   // sans avoir à ouvrir le menu) et sur "Mon activité" une fois le menu déroulant ouvert. Même
   // donnée, même moteur (applyBadge, voir js/supabase-client.js) que les badges de compte.html.
@@ -31,9 +39,9 @@ async function initAuthNav() {
       .eq('user_id', userId)
       .is('read_at', null)
       .not('lot_id', 'is', null);
-    const count = new Set((data || []).map(n => n.lot_id)).size;
-    applyBadge('user-menu-activite-badge', count);
-    applyBadge('user-menu-toggle-badge', count);
+    activiteCount = new Set((data || []).map(n => n.lot_id)).size;
+    applyBadge('user-menu-activite-badge', activiteCount);
+    updateToggleBadge();
   }
 
   // Agrège les 3 files d'attente de modération (lots en attente, expertises à valider, acheteurs
@@ -43,7 +51,7 @@ async function initAuthNav() {
   // de détail par catégorie affiché à cet endroit, seul le total compte ici.
   async function refreshModerationBadge() {
     if (!moderationBadge) return;
-    await renderBadgeNode({
+    moderationCount = await renderBadgeNode({
       badgeId: 'user-menu-moderation-badge',
       children: [
         { badgeId: null, fetchCount: () => countRows('lots', q => q.eq('status', 'draft')) },
@@ -51,6 +59,7 @@ async function initAuthNav() {
         { badgeId: null, fetchCount: () => countRows('profiles', q => q.gt('buyer_strikes', 0)) },
       ],
     });
+    updateToggleBadge();
   }
 
   let renderGen = 0;
