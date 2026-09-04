@@ -316,6 +316,7 @@
 let allLots = [];
 let allBids = [];
 let allProfiles = [];
+let adminRealtimeSubscribed = false; // évite les abonnements en double si init() se rejoue (retour bfcache)
 let activeFilter = 'draft';
 let activeReserveFilter = 'all';
 
@@ -340,9 +341,14 @@ async function init() {
   loadUsers();
   loadDashboardExtras();
 
-  supabaseClient.channel('admin:lots')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'lots' }, loadLots)
-    .subscribe();
+  // Un seul abonnement, jamais recréé si init() se rejoue (retour bfcache, voir plus bas) —
+  // sinon ils s'empileraient à chaque retour et chacun redéclencherait loadLots().
+  if (!adminRealtimeSubscribed) {
+    adminRealtimeSubscribed = true;
+    supabaseClient.channel('admin:lots')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'lots' }, loadLots)
+      .subscribe();
+  }
 }
 
 async function loadLots() {
@@ -803,6 +809,14 @@ document.querySelectorAll('#admin-tabs .spec-tab').forEach(tab => {
 });
 
 init();
+
+// Le retour arrière restaure souvent cette page depuis le cache mémoire du navigateur (bfcache)
+// plutôt que de la recharger — sans ça, la file de modération et les statistiques resteraient
+// figées à l'état d'avant la navigation. L'abonnement temps réel ne se recrée pas (voir la garde
+// adminRealtimeSubscribed plus haut).
+window.addEventListener('pageshow', (event) => {
+  if (event.persisted) init();
+});
 </script>
 </body>
 </html>

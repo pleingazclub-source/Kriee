@@ -169,14 +169,25 @@ function setFeedback(msg, isError) {
 }
 
 // Affiche l'état "déjà connecté" si une session existe
-(async () => {
+async function checkAlreadyConnected() {
   const { data: { session } } = await supabaseClient.auth.getSession();
   if (session) {
     document.getElementById('auth-forms').style.display = 'none';
     document.getElementById('already-connected').style.display = 'block';
     document.getElementById('already-email').textContent = session.user.email;
+  } else {
+    document.getElementById('auth-forms').style.display = 'block';
+    document.getElementById('already-connected').style.display = 'none';
   }
-})();
+}
+checkAlreadyConnected();
+
+// Le retour arrière restaure souvent cette page depuis le cache mémoire du navigateur (bfcache)
+// plutôt que de la recharger — utile si la session a changé entre-temps (déconnexion depuis un
+// autre onglet, lien magique cliqué ailleurs, etc.).
+window.addEventListener('pageshow', (event) => {
+  if (event.persisted) checkAlreadyConnected();
+});
 
 document.getElementById('logout-btn').addEventListener('click', async () => {
   await supabaseClient.auth.signOut();
