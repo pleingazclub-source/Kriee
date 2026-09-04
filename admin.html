@@ -363,6 +363,11 @@ async function loadLots() {
   }
   allLots = data;
   render();
+  // Toute action de modération passe par une mise à jour de "lots" (statut, expertise...),
+  // captée par l'abonnement temps réel qui redéclenche loadLots() — on en profite pour aussi
+  // rafraîchir le badge du bouton de connexion, qui vit dans un calcul séparé (auth.js) et ne
+  // serait sinon jamais informé qu'une action de modération vient de se terminer.
+  if (typeof initAuthNav === 'function') initAuthNav();
 }
 
 function isReserveMet(l) { return l.current_price >= l.reserve_price; }
@@ -752,6 +757,7 @@ async function loadFlaggedBuyers() {
       showToast('Compteur réinitialisé — les enchères sont débloquées.', 'success');
       loadFlaggedBuyers();
       renderModerationBadges();
+      if (typeof initAuthNav === 'function') initAuthNav();
     };
   });
 }
