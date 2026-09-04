@@ -116,7 +116,7 @@
 <main class="admin-wrap" id="admin-content" style="display:none;">
 
   <div class="spec-tabs" role="tablist" id="admin-tabs">
-    <button class="spec-tab" data-tab="overview" aria-selected="true">Vue d'ensemble<span class="tab-badge" id="badge-overview" style="display:none;"></span></button>
+    <button class="spec-tab" data-tab="overview" aria-selected="true">Vue d'ensemble</button>
     <button class="spec-tab" data-tab="lots" aria-selected="false">Lots<span class="tab-badge" id="badge-lots" style="display:none;"></span></button>
     <button class="spec-tab" data-tab="expertises" aria-selected="false">Expertises<span class="tab-badge" id="badge-expertises" style="display:none;"></span></button>
     <button class="spec-tab" data-tab="users" aria-selected="false">Utilisateurs</button>
@@ -211,13 +211,13 @@
 
   <div class="spec-panel" data-panel="lots">
     <div class="admin-filters" role="group">
-      <button class="chip" data-filter="draft" aria-pressed="true">En attente</button>
+      <button class="chip" data-filter="draft" aria-pressed="true">En attente<span class="tab-badge" id="badge-lots-draft" style="display:none;"></span></button>
       <button class="chip" data-filter="live">En ligne</button>
       <button class="chip" data-filter="sold">Vendus</button>
       <button class="chip" data-filter="unsold">Invendus</button>
       <button class="chip" data-filter="cancelled">Refusés</button>
       <button class="chip" data-filter="deleted">Supprimés</button>
-      <button class="chip" data-filter="all">Tous</button>
+      <button class="chip" data-filter="all">Tous<span class="tab-badge" id="badge-lots-tous" style="display:none;"></span></button>
     </div>
     <div class="admin-filters" role="group" aria-label="Filtrer par statut de réserve">
       <button class="chip" data-reserve-filter="all" aria-pressed="true">Toutes réserves</button>
@@ -375,12 +375,17 @@ function isReserveMet(l) { return l.current_price >= l.reserve_price; }
 // ============================================================
 async function renderModerationBadges() {
   const lotsCount = applyBadge('badge-lots', allLots.filter(l => l.status === 'draft').length);
-  const expertisesCount = applyBadge('badge-expertises', allLots.filter(l => l.expertise_status === 'pending').length);
-  const flaggedCount = await renderBadgeNode({
+  // Répercuté sur les puces de "Lots" elles-mêmes — "En attente" est la seule catégorie
+  // concernée (un lot en ligne/vendu/invendu/refusé/supprimé n'est jamais "en attente"), et
+  // "Tous" reprend le même total puisqu'il inclut forcément "En attente".
+  applyBadge('badge-lots-draft', lotsCount);
+  applyBadge('badge-lots-tous', lotsCount);
+
+  applyBadge('badge-expertises', allLots.filter(l => l.expertise_status === 'pending').length);
+  await renderBadgeNode({
     badgeId: 'badge-flagged',
     fetchCount: () => countRows('profiles', q => q.gt('buyer_strikes', 0)),
   });
-  applyBadge('badge-overview', lotsCount + expertisesCount + flaggedCount);
 }
 
 function renderExpertiseModeration() {
