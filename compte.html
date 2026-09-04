@@ -85,7 +85,7 @@
         </div>
         <a href="compte.html">Mon profil</a>
         <a href="compte.html#activite">Mon activité<span class="tab-badge" id="user-menu-activite-badge" style="display:none;"></span></a>
-        <a href="admin.html" id="user-menu-admin-link" style="display:none;">Modération</a>
+        <a href="admin.html" id="user-menu-admin-link" style="display:none;">Modération<span class="tab-badge" id="user-menu-moderation-badge" style="display:none;"></span></a>
         <button type="button" id="user-menu-logout">Se déconnecter</button>
       </div>
     </div>
@@ -354,31 +354,10 @@ async function loadNotificationBadges(userId) {
 }
 
 // ============================================================
-// Arbre de badges — un seul mécanisme générique, réutilisé à chaque niveau (menu → sous-menu),
-// plutôt qu'un bloc de calcul séparé et dupliqué par écran comme avant. Un nœud est soit une
-// feuille (une liste concrète de lot_id — "est-ce que CE lot a une notification non lue ?"),
-// soit un nœud parent dont le total est simplement la somme de ses enfants. Change la structure
-// de l'arbre ci-dessous pour ajouter/retirer un niveau de badge, sans toucher au calcul lui-même.
+// applyBadge / renderBadgeNode viennent de js/supabase-client.js (moteur commun à tout le site —
+// voir ce fichier pour le fonctionnement général). Ici, seule la structure de l'arbre propre à
+// "Mon activité" : Mes enchères / Mes lots en vente (En cours + Terminés) / Mes achats.
 // ============================================================
-
-function countUnread(lotIds) {
-  return new Set((lotIds || []).filter(id => unreadLotIds.has(id))).size;
-}
-
-function applyBadge(badgeId, count) {
-  const badge = document.getElementById(badgeId);
-  if (!badge) return;
-  badge.textContent = count > 9 ? '9+' : String(count);
-  badge.style.display = count > 0 ? 'inline-flex' : 'none';
-}
-
-function renderBadgeNode(node) {
-  const count = node.children
-    ? node.children.reduce((sum, child) => sum + renderBadgeNode(child), 0)
-    : countUnread(node.lotIds);
-  applyBadge(node.badgeId, count);
-  return count;
-}
 
 // Lots réellement affichés par chaque sous-onglet — alimenté par les 3 tableaux au chargement
 // (voir renderMyLots/loadMyBids/loadMyPurchases), pas par un comptage abstrait en base : garantit
@@ -387,24 +366,20 @@ let visibleLotIdsBySubtab = { encheres: [], achats: [] };
 // Même principe, un niveau plus bas : répartition de "Mes lots en vente" par puce de filtre.
 let myLotsFilterBuckets = { active: [], archived: [] };
 
-function renderAllBadges() {
-  renderBadgeNode({
-    badgeId: 'badge-activite',
+async function renderAllBadges() {
+  const encheresCount = await renderBadgeNode({ badgeId: 'badge-encheres', lotIds: visibleLotIdsBySubtab.encheres, unreadLotIds });
+  const lotsCount = await renderBadgeNode({
+    badgeId: 'badge-lots',
     children: [
-      { badgeId: 'badge-encheres', lotIds: visibleLotIdsBySubtab.encheres },
-      {
-        badgeId: 'badge-lots',
-        children: [
-          { badgeId: 'badge-lots-active', lotIds: myLotsFilterBuckets.active },
-          { badgeId: 'badge-lots-archived', lotIds: myLotsFilterBuckets.archived },
-        ],
-      },
-      { badgeId: 'badge-achats', lotIds: visibleLotIdsBySubtab.achats },
+      { badgeId: 'badge-lots-active', lotIds: myLotsFilterBuckets.active, unreadLotIds },
+      { badgeId: 'badge-lots-archived', lotIds: myLotsFilterBuckets.archived, unreadLotIds },
     ],
   });
-  // "Tous" partitionne exactement "En cours" + "Terminés" (aucun lot n'est dans les deux à la
-  // fois) — même liste de lots, pas besoin d'un troisième calcul séparé.
-  applyBadge('badge-lots-all', countUnread([...myLotsFilterBuckets.active, ...myLotsFilterBuckets.archived]));
+  // "Tous" reprend le total déjà calculé pour "Mes lots en vente" (En cours + Terminés
+  // partitionnent tous les lots, sans recoupement) — pas de troisième calcul séparé.
+  applyBadge('badge-lots-all', lotsCount);
+  const achatsCount = await renderBadgeNode({ badgeId: 'badge-achats', lotIds: visibleLotIdsBySubtab.achats, unreadLotIds });
+  applyBadge('badge-activite', encheresCount + lotsCount + achatsCount);
 }
 
 // Repère visuel sur une ligne de tableau — même pastille orange que les badges, mais en petit

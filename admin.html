@@ -92,7 +92,7 @@
         </div>
         <a href="compte.html">Mon profil</a>
         <a href="compte.html#activite">Mon activité<span class="tab-badge" id="user-menu-activite-badge" style="display:none;"></span></a>
-        <a href="admin.html" id="user-menu-admin-link" style="display:none;">Modération</a>
+        <a href="admin.html" id="user-menu-admin-link" style="display:none;">Modération<span class="tab-badge" id="user-menu-moderation-badge" style="display:none;"></span></a>
         <button type="button" id="user-menu-logout">Se déconnecter</button>
       </div>
     </div>
@@ -116,7 +116,7 @@
 <main class="admin-wrap" id="admin-content" style="display:none;">
 
   <div class="spec-tabs" role="tablist" id="admin-tabs">
-    <button class="spec-tab" data-tab="overview" aria-selected="true">Vue d'ensemble</button>
+    <button class="spec-tab" data-tab="overview" aria-selected="true">Vue d'ensemble<span class="tab-badge" id="badge-overview" style="display:none;"></span></button>
     <button class="spec-tab" data-tab="lots" aria-selected="false">Lots<span class="tab-badge" id="badge-lots" style="display:none;"></span></button>
     <button class="spec-tab" data-tab="expertises" aria-selected="false">Expertises<span class="tab-badge" id="badge-expertises" style="display:none;"></span></button>
     <button class="spec-tab" data-tab="users" aria-selected="false">Utilisateurs</button>
@@ -337,7 +337,6 @@ async function init() {
   document.getElementById('admin-content').style.display = 'block';
   loadLots();
   loadFlaggedBuyers();
-  loadFlaggedBadge();
   loadUsers();
   loadDashboardExtras();
 
@@ -368,26 +367,24 @@ async function loadLots() {
 
 function isReserveMet(l) { return l.current_price >= l.reserve_price; }
 
-// Badges de compteur façon leboncoin — comptent des files d'attente en direct (pas de notion
-// de "lu/non lu" ici : le badge disparaît naturellement une fois l'item traité).
-function updateBadgeCount(id, count) {
-  const badge = document.getElementById(id);
-  if (!badge) return;
-  badge.textContent = count > 9 ? '9+' : String(count);
-  badge.style.display = count > 0 ? 'inline-flex' : 'none';
-}
-
-async function loadFlaggedBadge() {
-  const { count } = await supabaseClient
-    .from('profiles')
-    .select('id', { count: 'exact', head: true })
-    .gt('buyer_strikes', 0);
-  updateBadgeCount('badge-flagged', count || 0);
+// ============================================================
+// applyBadge / renderBadgeNode / countRows viennent de js/supabase-client.js (moteur commun à
+// tout le site — voir ce fichier pour le fonctionnement général). Ici, seule la structure de
+// l'arbre propre à la modération : "Vue d'ensemble" reprend la somme de Lots + Expertises +
+// Signalés, exactement comme "Mon activité" reprend celle de ses sous-onglets côté Mon compte.
+// ============================================================
+async function renderModerationBadges() {
+  const lotsCount = applyBadge('badge-lots', allLots.filter(l => l.status === 'draft').length);
+  const expertisesCount = applyBadge('badge-expertises', allLots.filter(l => l.expertise_status === 'pending').length);
+  const flaggedCount = await renderBadgeNode({
+    badgeId: 'badge-flagged',
+    fetchCount: () => countRows('profiles', q => q.gt('buyer_strikes', 0)),
+  });
+  applyBadge('badge-overview', lotsCount + expertisesCount + flaggedCount);
 }
 
 function renderExpertiseModeration() {
   const pending = allLots.filter(l => l.expertise_status === 'pending');
-  updateBadgeCount('badge-expertises', pending.length);
   const rows = document.getElementById('expertise-rows');
   const empty = document.getElementById('expertise-empty');
   empty.style.display = pending.length ? 'none' : 'block';
@@ -584,7 +581,7 @@ function renderTopViewed() {
 function render() {
   renderRevenueDashboard();
   renderExpertiseModeration();
-  updateBadgeCount('badge-lots', allLots.filter(l => l.status === 'draft').length);
+  renderModerationBadges();
   renderDashboardExtras();
 
   const rows = document.getElementById('admin-rows');
@@ -749,7 +746,7 @@ async function loadFlaggedBuyers() {
       if (error) { showToast('Erreur : ' + error.message, 'error'); return; }
       showToast('Compteur réinitialisé — les enchères sont débloquées.', 'success');
       loadFlaggedBuyers();
-      loadFlaggedBadge();
+      renderModerationBadges();
     };
   });
 }

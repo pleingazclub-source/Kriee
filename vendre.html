@@ -872,41 +872,48 @@ async function checkProfileCompleteForSelling() {
 document.getElementById('sell-form').addEventListener('submit', async (e) => {
   e.preventDefault();
 
-  // Filet de sécurité : revalide toutes les étapes jusqu'au récapitulatif, au cas où le formulaire
-  // serait soumis autrement qu'en cliquant sur "Suivant" (ex. touche Entrée dans un champ).
-  const steps = currentSteps();
-  for (let i = 0; i < steps.length - 1; i++) {
-    const panel = document.querySelector(`.spec-panel[data-step="${steps[i]}"]`);
-    const invalidField = panel.querySelector(':invalid');
-    if (invalidField) {
-      stepIndex = i; showStep();
-      invalidField.reportValidity();
-      return;
-    }
-  }
-
-  const feedback = document.getElementById('sell-feedback');
-  const isConfigured = !SUPABASE_URL.includes('TON-PROJET');
-
-  // Au moins une photo est obligatoire — la transparence du modèle "vendu en l'état" repose
-  // entièrement sur ce que l'acheteur peut voir, pas de fiche sans aucune photo.
-  const hasExistingPhotos = existingLotData && existingLotData.images && existingLotData.images.length > 0;
-  if (selectedPhotos.length === 0 && !hasExistingPhotos) {
-    const photoStep = currentSteps().indexOf('4');
-    if (photoStep !== -1) { stepIndex = photoStep; showStep(); }
-    feedback.textContent = 'Au moins une photo est obligatoire avant de pouvoir déposer ton lot.';
-    feedback.style.color = 'var(--buoy)';
-    document.getElementById('photos').scrollIntoView({ behavior: 'smooth', block: 'center' });
-    return;
-  }
-
-  if (!isConfigured) {
-    feedback.textContent = 'Démo : connecte Supabase (js/supabase-client.js) pour publier réellement un lot.';
-    feedback.style.color = 'var(--mistral)';
-    return;
-  }
+  // Bloque tout double-déclenchement (double-clic/double-tap rapide) DÈS l'entrée dans le
+  // gestionnaire — avant même la validation — sinon deux appels quasi simultanés passent tous
+  // les deux la validation à l'identique et créent chacun leur propre lot en base.
+  const submitBtn = document.getElementById('submit-btn');
+  if (submitBtn.disabled) return;
+  submitBtn.disabled = true;
 
   try {
+    // Filet de sécurité : revalide toutes les étapes jusqu'au récapitulatif, au cas où le formulaire
+    // serait soumis autrement qu'en cliquant sur "Suivant" (ex. touche Entrée dans un champ).
+    const steps = currentSteps();
+    for (let i = 0; i < steps.length - 1; i++) {
+      const panel = document.querySelector(`.spec-panel[data-step="${steps[i]}"]`);
+      const invalidField = panel.querySelector(':invalid');
+      if (invalidField) {
+        stepIndex = i; showStep();
+        invalidField.reportValidity();
+        return;
+      }
+    }
+
+    const feedback = document.getElementById('sell-feedback');
+    const isConfigured = !SUPABASE_URL.includes('TON-PROJET');
+
+    // Au moins une photo est obligatoire — la transparence du modèle "vendu en l'état" repose
+    // entièrement sur ce que l'acheteur peut voir, pas de fiche sans aucune photo.
+    const hasExistingPhotos = existingLotData && existingLotData.images && existingLotData.images.length > 0;
+    if (selectedPhotos.length === 0 && !hasExistingPhotos) {
+      const photoStep = currentSteps().indexOf('4');
+      if (photoStep !== -1) { stepIndex = photoStep; showStep(); }
+      feedback.textContent = 'Au moins une photo est obligatoire avant de pouvoir déposer ton lot.';
+      feedback.style.color = 'var(--buoy)';
+      document.getElementById('photos').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+
+    if (!isConfigured) {
+      feedback.textContent = 'Démo : connecte Supabase (js/supabase-client.js) pour publier réellement un lot.';
+      feedback.style.color = 'var(--mistral)';
+      return;
+    }
+
     const { data: { session } } = await supabaseClient.auth.getSession();
     if (!session) {
       feedback.textContent = 'Connecte-toi pour déposer un lot.';
@@ -1106,9 +1113,13 @@ document.getElementById('sell-form').addEventListener('submit', async (e) => {
     }
   }
   } catch (err) {
-    feedback.textContent = 'Erreur inattendue : ' + err.message;
-    feedback.style.color = 'var(--buoy)';
+    document.getElementById('sell-feedback').textContent = 'Erreur inattendue : ' + err.message;
+    document.getElementById('sell-feedback').style.color = 'var(--buoy)';
     console.error(err);
+  } finally {
+    // Réactive dans tous les cas — validation ratée, erreur, ou succès (sans effet visible si la
+    // vue de succès a pris la place du formulaire, mais couvre aussi la resoumission via "corriger").
+    submitBtn.disabled = false;
   }
 });
 </script>
