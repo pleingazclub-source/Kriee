@@ -264,9 +264,9 @@
 
   <section class="spec-panel" data-subpanel="lots">
     <div class="filters" role="group" aria-label="Filtrer mes lots" style="margin-bottom:1rem; padding:0;">
-      <button class="chip" data-lots-filter="active" aria-pressed="true">En cours</button>
-      <button class="chip" data-lots-filter="archived" aria-pressed="false">Terminés</button>
-      <button class="chip" data-lots-filter="all" aria-pressed="false">Tous</button>
+      <button class="chip" data-lots-filter="active" aria-pressed="true">En cours<span class="tab-badge" id="badge-lots-active" style="display:none;"></span></button>
+      <button class="chip" data-lots-filter="archived" aria-pressed="false">Terminés<span class="tab-badge" id="badge-lots-archived" style="display:none;"></span></button>
+      <button class="chip" data-lots-filter="all" aria-pressed="false">Tous<span class="tab-badge" id="badge-lots-all" style="display:none;"></span></button>
     </div>
     <table class="account-table" id="my-lots-table">
       <thead>
