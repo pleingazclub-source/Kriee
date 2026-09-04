@@ -128,6 +128,12 @@ function renderLot() {
       const leading = checkLeadingStatus(session.user.id);
       if (!leading) checkProfileComplete(session.user.id);
     }
+    // Marque comme lues les notifications concernant CE lot précis dès sa consultation — c'est
+    // ici, pas en ouvrant un onglet de "Mon compte", que le badge doit réellement se décrémenter,
+    // un lot à la fois.
+    supabaseClient.from('notifications').update({ read_at: new Date().toISOString() })
+      .eq('user_id', session.user.id).eq('lot_id', l.id).is('read_at', null)
+      .then(() => {});
   });
 }
 
