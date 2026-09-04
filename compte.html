@@ -339,30 +339,61 @@ async function loadNotificationBadges(userId) {
     .is('read_at', null);
 
   unreadLotIds = new Set((data || []).filter(n => n.lot_id).map(n => n.lot_id));
-  recomputeSubtabBadges();
+  renderAllBadges();
 }
 
-// Le badge de chaque sous-onglet ne compte plus les notifications par type (ça pouvait afficher
-// "1" sans qu'aucune ligne visible ne porte le point correspondant — ex. une notification liée à
-// une vente entre-temps annulée, filtrée de "Mes achats") mais le nombre de lots RÉELLEMENT
-// affichés dans ce tableau qui ont une notification non lue — garantit que le chiffre du badge
-// correspond toujours exactement au nombre de points visibles dessous.
-let visibleLotIdsBySubtab = { encheres: [], lots: [], achats: [] };
-function recomputeSubtabBadges() {
-  let total = 0;
-  Object.entries(visibleLotIdsBySubtab).forEach(([subtab, lotIds]) => {
-    const count = new Set(lotIds.filter(id => unreadLotIds.has(id))).size;
-    const badge = document.getElementById(`badge-${subtab}`);
-    if (badge) {
-      badge.textContent = count > 9 ? '9+' : String(count);
-      badge.style.display = count > 0 ? 'inline-flex' : 'none';
-    }
-    total += count;
-  });
+// ============================================================
+// Arbre de badges — un seul mécanisme générique, réutilisé à chaque niveau (menu → sous-menu),
+// plutôt qu'un bloc de calcul séparé et dupliqué par écran comme avant. Un nœud est soit une
+// feuille (une liste concrète de lot_id — "est-ce que CE lot a une notification non lue ?"),
+// soit un nœud parent dont le total est simplement la somme de ses enfants. Change la structure
+// de l'arbre ci-dessous pour ajouter/retirer un niveau de badge, sans toucher au calcul lui-même.
+// ============================================================
 
-  const activiteBadge = document.getElementById('badge-activite');
-  activiteBadge.textContent = total > 9 ? '9+' : String(total);
-  activiteBadge.style.display = total > 0 ? 'inline-flex' : 'none';
+function countUnread(lotIds) {
+  return new Set((lotIds || []).filter(id => unreadLotIds.has(id))).size;
+}
+
+function applyBadge(badgeId, count) {
+  const badge = document.getElementById(badgeId);
+  if (!badge) return;
+  badge.textContent = count > 9 ? '9+' : String(count);
+  badge.style.display = count > 0 ? 'inline-flex' : 'none';
+}
+
+function renderBadgeNode(node) {
+  const count = node.children
+    ? node.children.reduce((sum, child) => sum + renderBadgeNode(child), 0)
+    : countUnread(node.lotIds);
+  applyBadge(node.badgeId, count);
+  return count;
+}
+
+// Lots réellement affichés par chaque sous-onglet — alimenté par les 3 tableaux au chargement
+// (voir renderMyLots/loadMyBids/loadMyPurchases), pas par un comptage abstrait en base : garantit
+// que le chiffre d'un badge correspond toujours exactement au nombre de points visibles dessous.
+let visibleLotIdsBySubtab = { encheres: [], achats: [] };
+// Même principe, un niveau plus bas : répartition de "Mes lots en vente" par puce de filtre.
+let myLotsFilterBuckets = { active: [], archived: [] };
+
+function renderAllBadges() {
+  renderBadgeNode({
+    badgeId: 'badge-activite',
+    children: [
+      { badgeId: 'badge-encheres', lotIds: visibleLotIdsBySubtab.encheres },
+      {
+        badgeId: 'badge-lots',
+        children: [
+          { badgeId: 'badge-lots-active', lotIds: myLotsFilterBuckets.active },
+          { badgeId: 'badge-lots-archived', lotIds: myLotsFilterBuckets.archived },
+        ],
+      },
+      { badgeId: 'badge-achats', lotIds: visibleLotIdsBySubtab.achats },
+    ],
+  });
+  // "Tous" partitionne exactement "En cours" + "Terminés" (aucun lot n'est dans les deux à la
+  // fois) — même liste de lots, pas besoin d'un troisième calcul séparé.
+  applyBadge('badge-lots-all', countUnread([...myLotsFilterBuckets.active, ...myLotsFilterBuckets.archived]));
 }
 
 // Repère visuel sur une ligne de tableau — même pastille orange que les badges, mais en petit
@@ -501,10 +532,12 @@ document.querySelectorAll('button[data-lots-filter]').forEach(btn => {
 function renderMyLots() {
   const rows = document.getElementById('my-lots-rows');
   const salesByLot = myLotsSalesByLot;
-  // Le badge se base sur TOUS les lots (pas seulement ceux visibles sous le filtre actif) — sinon
-  // basculer entre "En cours"/"Terminés" changerait le chiffre du badge à chaque clic.
-  visibleLotIdsBySubtab.lots = myLotsData.map(l => l.id);
-  recomputeSubtabBadges();
+  // Alimente l'arbre de badges avec ce que ce tableau affiche réellement, aux deux niveaux
+  // concernés (l'onglet "Mes lots en vente" lui-même, et ses puces de filtre en dessous).
+  myLotsFilterBuckets.active = myLotsData.filter(l => !ARCHIVED_STATUSES.includes(l.status)).map(l => l.id);
+  myLotsFilterBuckets.archived = myLotsData.filter(l => ARCHIVED_STATUSES.includes(l.status)).map(l => l.id);
+  renderAllBadges();
+
   const filtered = myLotsFilter === 'all'
     ? myLotsData
     : myLotsData.filter(l => ARCHIVED_STATUSES.includes(l.status) === (myLotsFilter === 'archived'));
@@ -609,7 +642,7 @@ async function loadMyBids(userId) {
   .filter(b => !(b.lots && b.lots.status === 'sold' && b.lots.leading_bidder_id === userId));
 
   visibleLotIdsBySubtab.encheres = myBestBids.map(b => b.lot_id);
-  recomputeSubtabBadges();
+  renderAllBadges();
 
   if (myBestBids.length === 0) {
     document.getElementById('my-bids-empty').style.display = 'block';
@@ -666,7 +699,7 @@ async function loadMyPurchases(userId) {
   const list = document.getElementById('my-purchases-list');
 
   visibleLotIdsBySubtab.achats = (data || []).map(s => s.lot_id);
-  recomputeSubtabBadges();
+  renderAllBadges();
 
   if (error || !data || data.length === 0) {
     document.getElementById('my-purchases-empty').style.display = 'block';
