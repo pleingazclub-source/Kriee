@@ -334,24 +334,29 @@ async function loadNotificationBadges(userId) {
   currentUserId = userId;
   const { data } = await supabaseClient
     .from('notifications')
-    .select('type, lot_id')
+    .select('lot_id')
     .eq('user_id', userId)
     .is('read_at', null);
 
-  const counts = { encheres: 0, lots: 0, achats: 0 };
-  unreadLotIds = new Set();
-  (data || []).forEach(n => {
-    const subtab = NOTIF_TYPE_TO_SUBTAB[n.type];
-    if (subtab) counts[subtab]++;
-    if (n.lot_id) unreadLotIds.add(n.lot_id);
-  });
+  unreadLotIds = new Set((data || []).filter(n => n.lot_id).map(n => n.lot_id));
+  recomputeSubtabBadges();
+}
 
+// Le badge de chaque sous-onglet ne compte plus les notifications par type (ça pouvait afficher
+// "1" sans qu'aucune ligne visible ne porte le point correspondant — ex. une notification liée à
+// une vente entre-temps annulée, filtrée de "Mes achats") mais le nombre de lots RÉELLEMENT
+// affichés dans ce tableau qui ont une notification non lue — garantit que le chiffre du badge
+// correspond toujours exactement au nombre de points visibles dessous.
+let visibleLotIdsBySubtab = { encheres: [], lots: [], achats: [] };
+function recomputeSubtabBadges() {
   let total = 0;
-  Object.entries(counts).forEach(([subtab, count]) => {
+  Object.entries(visibleLotIdsBySubtab).forEach(([subtab, lotIds]) => {
+    const count = new Set(lotIds.filter(id => unreadLotIds.has(id))).size;
     const badge = document.getElementById(`badge-${subtab}`);
-    if (!badge) return;
-    badge.textContent = count > 9 ? '9+' : String(count);
-    badge.style.display = count > 0 ? 'inline-flex' : 'none';
+    if (badge) {
+      badge.textContent = count > 9 ? '9+' : String(count);
+      badge.style.display = count > 0 ? 'inline-flex' : 'none';
+    }
     total += count;
   });
 
@@ -496,6 +501,10 @@ document.querySelectorAll('button[data-lots-filter]').forEach(btn => {
 function renderMyLots() {
   const rows = document.getElementById('my-lots-rows');
   const salesByLot = myLotsSalesByLot;
+  // Le badge se base sur TOUS les lots (pas seulement ceux visibles sous le filtre actif) — sinon
+  // basculer entre "En cours"/"Terminés" changerait le chiffre du badge à chaque clic.
+  visibleLotIdsBySubtab.lots = myLotsData.map(l => l.id);
+  recomputeSubtabBadges();
   const filtered = myLotsFilter === 'all'
     ? myLotsData
     : myLotsData.filter(l => ARCHIVED_STATUSES.includes(l.status) === (myLotsFilter === 'archived'));
@@ -599,6 +608,9 @@ async function loadMyBids(userId) {
   // ça ferait doublon.
   .filter(b => !(b.lots && b.lots.status === 'sold' && b.lots.leading_bidder_id === userId));
 
+  visibleLotIdsBySubtab.encheres = myBestBids.map(b => b.lot_id);
+  recomputeSubtabBadges();
+
   if (myBestBids.length === 0) {
     document.getElementById('my-bids-empty').style.display = 'block';
     return;
@@ -652,6 +664,10 @@ async function loadMyPurchases(userId) {
     .order('created_at', { ascending: false });
 
   const list = document.getElementById('my-purchases-list');
+
+  visibleLotIdsBySubtab.achats = (data || []).map(s => s.lot_id);
+  recomputeSubtabBadges();
+
   if (error || !data || data.length === 0) {
     document.getElementById('my-purchases-empty').style.display = 'block';
     return;
