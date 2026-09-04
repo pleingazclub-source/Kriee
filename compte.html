@@ -19,6 +19,8 @@
   .account-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
   .account-table tr.row-clickable:hover { background: var(--chalk); }
   .account-table tr.row-clickable { cursor: pointer; }
+  .sale-card.row-clickable { cursor: pointer; transition: background 0.15s ease; }
+  .sale-card.row-clickable:hover { background: var(--chalk); }
   .account-table th { text-align: left; font-family: var(--font-data); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: #5A6772; padding: 0.6rem; border-bottom: 1px solid #C9C2B2; }
   .account-table td { padding: 0.7rem 0.6rem; border-bottom: 1px solid #E4DFD3; vertical-align: middle; }
   .account-table img { width: 46px; height: 46px; object-fit: cover; border-radius: 3px; }
@@ -362,7 +364,7 @@ async function loadNotificationBadges(userId) {
 // point plein plutôt qu'un chiffre, pour ne pas surcharger une ligne de lot.
 function unreadDotHTML(lotId) {
   return unreadLotIds.has(lotId)
-    ? '<span title="Nouveau" style="display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--buoy); margin-right:0.4rem; vertical-align:middle;"></span>'
+    ? '<span class="unread-dot" title="Nouveau" style="display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--buoy); margin-right:0.4rem; vertical-align:middle;"></span>'
     : '';
 }
 
@@ -701,7 +703,7 @@ function saleCardHTML(s, role) {
   }
 
   return `
-    <div class="sale-card">
+    <div class="sale-card row-clickable" onclick="if(!event.target.closest('a,button,input,label')) location.href='lot.html?id=${s.lot_id}'">
       <div class="sale-card__top">
         <div class="sale-card__top-left">
           ${lot?.cover_image_url ? `<img src="${lot.cover_image_url}" alt="" class="sale-card__thumb">` : ''}
@@ -788,6 +790,11 @@ function wireSaleActions() {
     btn.onclick = async () => {
       const saleId = btn.dataset.saleReveal;
       await markLotNotificationsRead(btn.dataset.lotId);
+      // Pas de re-rendu complet de la liste ici (contrairement aux boutons accepter/refuser/etc.
+      // plus bas) — ça effacerait les coordonnées tout juste affichées, le statut de la vente
+      // n'ayant lui pas changé. On retire juste le repère directement, sans tout recharger.
+      // (le même bouton existe aussi côté "Mes lots en vente", dans une <tr> plutôt qu'une carte)
+      btn.closest('.sale-card, tr')?.querySelectorAll('.unread-dot').forEach(el => el.remove());
       const { data, error } = await supabaseClient.rpc('get_sale_contact', { p_sale_id: saleId });
       const container = document.getElementById(`contact-${saleId}`);
       if (error || !data || !data[0]) {
