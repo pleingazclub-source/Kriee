@@ -15,13 +15,12 @@ async function initAuthNav() {
   const nameEl = document.getElementById('user-menu-name');
   const emailEl = document.getElementById('user-menu-email');
   const adminLink = document.getElementById('user-menu-admin-link');
-  const activiteBadge = document.getElementById('user-menu-activite-badge');
-  const toggleBadge = document.getElementById('user-menu-toggle-badge');
+  const moderationBadge = document.getElementById('user-menu-moderation-badge');
   const logoutBtn = document.getElementById('user-menu-logout');
 
   // Compteur de notifications non lues — affiché à la fois sur le bouton fermé (pour être visible
   // sans avoir à ouvrir le menu) et sur "Mon activité" une fois le menu déroulant ouvert. Même
-  // donnée que les badges par sous-onglet de compte.html.
+  // donnée, même moteur (applyBadge, voir js/supabase-client.js) que les badges de compte.html.
   async function refreshActiviteBadge(userId) {
     // Même métrique que "Mon activité" sur compte.html (nombre de LOTS distincts concernés par
     // une notification non lue) — pas un comptage de notifications par type, pour que le badge
@@ -33,15 +32,25 @@ async function initAuthNav() {
       .is('read_at', null)
       .not('lot_id', 'is', null);
     const count = new Set((data || []).map(n => n.lot_id)).size;
-    const display = count > 9 ? '9+' : String(count || 0);
-    if (activiteBadge) {
-      activiteBadge.textContent = display;
-      activiteBadge.style.display = count > 0 ? 'inline-flex' : 'none';
-    }
-    if (toggleBadge) {
-      toggleBadge.textContent = display;
-      toggleBadge.style.display = count > 0 ? 'inline-flex' : 'none';
-    }
+    applyBadge('user-menu-activite-badge', count);
+    applyBadge('user-menu-toggle-badge', count);
+  }
+
+  // Agrège les 3 files d'attente de modération (lots en attente, expertises à valider, acheteurs
+  // signalés) — mêmes feuilles, même moteur (renderBadgeNode/countRows) que le badge "Vue
+  // d'ensemble" d'admin.html, pour que "Modération" dans ce menu reflète toujours exactement ce
+  // qu'on y retrouve, sans avoir à l'ouvrir d'abord. Les enfants n'ont pas de badgeId (null) : pas
+  // de détail par catégorie affiché à cet endroit, seul le total compte ici.
+  async function refreshModerationBadge() {
+    if (!moderationBadge) return;
+    await renderBadgeNode({
+      badgeId: 'user-menu-moderation-badge',
+      children: [
+        { badgeId: null, fetchCount: () => countRows('lots', q => q.eq('status', 'draft')) },
+        { badgeId: null, fetchCount: () => countRows('lots', q => q.eq('expertise_status', 'pending')) },
+        { badgeId: null, fetchCount: () => countRows('profiles', q => q.gt('buyer_strikes', 0)) },
+      ],
+    });
   }
 
   let renderGen = 0;
@@ -65,6 +74,7 @@ async function initAuthNav() {
       nameEl.textContent = displayName;
       emailEl.textContent = session.user.email;
       adminLink.style.display = (profile && profile.is_admin) ? 'block' : 'none';
+      if (profile && profile.is_admin) refreshModerationBadge();
       refreshActiviteBadge(session.user.id);
     } else {
       navLogin.href = 'connexion.html';

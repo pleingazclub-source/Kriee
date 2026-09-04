@@ -118,3 +118,55 @@ const NOTIF_TYPE_TO_SUBTAB = {
   expertise_approved: 'lots',
   expertise_rejected: 'lots',
 };
+
+// ============================================================
+// MOTEUR DE BADGES — partagé par toutes les pages (menu principal, Mon compte, Modération).
+// Un seul mécanisme réutilisé à chaque niveau de menu/sous-menu du site, plutôt qu'une
+// implémentation différente par écran : un badge est soit un NŒUD PARENT (son total est la
+// somme de ses enfants — comme "Mon activité" qui reprend le total de ses sous-onglets), soit
+// une FEUILLE qui sait calculer son propre nombre, de l'une de ces 3 façons :
+//   - { count: 12 }            un nombre déjà calculé ailleurs (ex. un tableau déjà en mémoire)
+//   - { fetchCount: async fn } une requête Supabase à exécuter (ex. count(*) admin)
+//   - { lotIds, unreadLotIds } l'intersection entre des lots affichés et des lots à notif non
+//                              lue (le cas le plus courant côté acheteur/vendeur)
+// Chaque nœud porte un badgeId (l'id de l'élément <span class="tab-badge"> à mettre à jour) ou
+// null si ce niveau n'a pas de badge visible à l'écran mais sert quand même à faire remonter
+// un total vers son parent (ex. les feuilles internes du badge "Modération" du menu déroulant,
+// qui n'affiche qu'un seul total sans détail par catégorie à cet endroit-là).
+// ============================================================
+
+function applyBadge(badgeId, count) {
+  const badge = badgeId && document.getElementById(badgeId);
+  if (badge) {
+    badge.textContent = count > 9 ? '9+' : String(count);
+    badge.style.display = count > 0 ? 'inline-flex' : 'none';
+  }
+  return count;
+}
+
+async function renderBadgeNode(node) {
+  let count;
+  if (node.children) {
+    const childCounts = await Promise.all(node.children.map(renderBadgeNode));
+    count = childCounts.reduce((sum, c) => sum + c, 0);
+  } else if (typeof node.count === 'number') {
+    count = node.count;
+  } else if (node.fetchCount) {
+    count = await node.fetchCount();
+  } else if (node.lotIds && node.unreadLotIds) {
+    count = new Set(node.lotIds.filter(id => node.unreadLotIds.has(id))).size;
+  } else {
+    count = 0;
+  }
+  applyBadge(node.badgeId, count);
+  return count;
+}
+
+// Utilitaire pour les feuilles de type fetchCount — évite de réécrire le même count(*) partout
+// (ex. countRows('lots', q => q.eq('status', 'draft'))).
+async function countRows(table, buildQuery) {
+  let query = supabaseClient.from(table).select('id', { count: 'exact', head: true });
+  if (buildQuery) query = buildQuery(query);
+  const { count } = await query;
+  return count || 0;
+}
